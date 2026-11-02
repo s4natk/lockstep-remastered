@@ -1,4 +1,5 @@
-import { indexTokens } from "./runbookIndex.js";
+﻿import { indexTokens } from "./runbookIndex.js";
+import { providerBaseUrl, providerConfig, type ProviderEnvironment } from "./providerConfig.js";
 
 export const EMBEDDING_DIMENSIONS = 64;
 const EMBEDDING_MODEL = "text-embedding-3-small";
@@ -10,6 +11,7 @@ export interface Embedder {
 export function createEmbedder(
   apiKey: string | undefined,
   fetchImpl: typeof fetch = fetch,
+  options: { baseUrl?: string; model?: string } = {},
 ): Embedder {
   if (!apiKey?.trim()) {
     return { embed: async (text) => hashEmbed(text) };
@@ -18,12 +20,12 @@ export function createEmbedder(
     async embed(text: string): Promise<number[]> {
       if (text.length > 8000 || !text.trim())
         throw new Error("Embedding input must contain 1 to 8000 characters");
-      const response = await fetchImpl("https://api.openai.com/v1/embeddings", {
+      const response = await fetchImpl(`${providerBaseUrl(options.baseUrl)}/embeddings`, {
         method: "POST",
         signal: AbortSignal.timeout(8000),
-        headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+        headers: { authorization: `Bearer ${apiKey.trim()}`, "content-type": "application/json" },
         body: JSON.stringify({
-          model: EMBEDDING_MODEL,
+          model: options.model ?? EMBEDDING_MODEL,
           input: text,
           dimensions: EMBEDDING_DIMENSIONS,
         }),
@@ -47,6 +49,16 @@ export function createEmbedder(
   };
 }
 
+export function createEnvEmbedder(
+  env: ProviderEnvironment,
+  fetchImpl: typeof fetch = fetch,
+): Embedder {
+  const config = providerConfig(env);
+  return createEmbedder(config.apiKey, fetchImpl, {
+    baseUrl: config.baseUrl,
+    model: config.embeddingModel,
+  });
+}
 function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }

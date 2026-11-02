@@ -19,7 +19,8 @@
     "test:rust": "cargo test --locked --manifest-path packages/sql_guard/Cargo.toml",
     "eval:investigations": "pnpm --filter @lockstep/worker eval:investigations",
     "security:scan": "node scripts/audit-repository.mjs",
-    "release:audit": "node scripts/audit-repository.mjs --release"
+    "release:audit": "node scripts/audit-repository.mjs --release",
+    "build:sql": "node scripts/build-sql-wasm.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

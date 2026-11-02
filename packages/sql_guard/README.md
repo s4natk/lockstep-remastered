@@ -13,10 +13,17 @@ must translate UTF-8 byte spans before calculating source lines or editor positi
 ## Build and test
 
 ```sh
-cargo test --locked
+cargo test --locked --manifest-path packages/sql_guard/Cargo.toml
 rustup target add wasm32-unknown-unknown
-wasm-pack build --target web --release
+pnpm build:sql
 ```
+
+Run these commands from the repository root with wasm-pack installed. The build
+script strips symbols, remaps the local home/project roots to generic build paths,
+and verifies the generated binary before copying matching web bindings into `pkg/`.
+It uses Rust release optimization without the additional wasm-opt pass, avoiding
+bulk-memory compatibility issues with older bundled Binaryen versions. Intermediate
+files stay in the ignored `target/` directory.
 
 The WASM export `parse_migration` returns JSON with camelCase properties and
 snake_case hazard codes. Keep `pkg/` bindings and the binary together when rebuilding.

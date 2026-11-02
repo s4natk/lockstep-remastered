@@ -56,7 +56,12 @@ export function parseRuntimeFailure(evidence: Evidence[]): ParsedFailureDetails 
         evidenceId: item.id,
       };
     }
-    if (frame && result.stackFrames.length < 128) {
+    if (
+      frame &&
+      (frame.line === undefined || (Number.isSafeInteger(frame.line) && frame.line > 0)) &&
+      (frame.column === undefined || (Number.isSafeInteger(frame.column) && frame.column > 0)) &&
+      result.stackFrames.length < 128
+    ) {
       result.stackFrames.push(frame);
       result.metadata.language = frame.language;
     }

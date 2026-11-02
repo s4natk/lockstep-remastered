@@ -11,6 +11,7 @@ export type {
   DeterministicFinding,
   ParsingWarning,
   StackFrame,
+  LogEvent,
   NormalizedFailureContext,
   RetrievalQuery,
   RootCauseHypothesis,
@@ -30,3 +31,27 @@ export {
 export { detectFailureKind } from "./classify.js";
 export { normalizeFailure } from "./normalize.js";
 export { isInvestigationReport } from "./reportValidation.js";
+export {
+  SIDEKICK_LIMITS,
+  KNOWLEDGE_LIMITS,
+  KNOWLEDGE_KINDS,
+  validateSidekickTurnInput,
+  validateKnowledgeInput,
+  isThreadSummary,
+  isSidekickMessage,
+  isSidekickThread,
+  isKnowledgeSummary,
+  isKnowledgeDocument,
+  isSidekickEvent,
+} from "./sidekick.js";
+export type {
+  SidekickTurnInput,
+  ThreadSummary,
+  SidekickMessage,
+  SidekickThread,
+  KnowledgeKind,
+  KnowledgeInput,
+  KnowledgeSummary,
+  KnowledgeDocument,
+  SidekickEvent,
+} from "./sidekick.js";

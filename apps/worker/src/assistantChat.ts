@@ -1,6 +1,6 @@
-import { readChatDeltaStream } from "./openaiChat.js";
+﻿import { readChatDeltaStream } from "./openaiChat.js";
 
-const CHAT_URL = "https://api.openai.com/v1/chat/completions";
+import { providerBaseUrl } from "./providerConfig.js";
 
 const SYSTEM = `You are Lockstep, a friendly assistant for Postgres migration reviews.
 You help users understand rollout risk, hazards, and safe DDL patterns.
@@ -13,21 +13,23 @@ export async function* streamAssistantReply(
   userText: string,
   apiKey: string | undefined,
   fetchImpl: typeof fetch = fetch,
+  options: { baseUrl?: string; model?: string } = {},
 ): AsyncGenerator<string> {
   const trimmed = userText.trim();
-  if (apiKey === undefined || apiKey === "") {
+  const key = apiKey?.trim();
+  if (!key) {
     yield* mockAssistantReply(trimmed);
     return;
   }
-  const response = await fetchImpl(CHAT_URL, {
+  const response = await fetchImpl(`${providerBaseUrl(options.baseUrl)}/chat/completions`, {
     method: "POST",
     signal: AbortSignal.timeout(25_000),
     headers: {
-      authorization: `Bearer ${apiKey}`,
+      authorization: `Bearer ${key}`,
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: "gpt-4.1-mini",
+      model: options.model ?? "gpt-4.1-mini",
       stream: true,
       max_completion_tokens: 1200,
       store: false,

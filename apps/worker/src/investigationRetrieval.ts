@@ -1,6 +1,7 @@
-import type { Evidence, NormalizedFailureContext } from "@lockstep/shared";
+﻿import type { Evidence, NormalizedFailureContext } from "@lockstep/shared";
 import type { Env } from "./env.js";
-import { createEmbedder } from "./embeddings.js";
+import { createEnvEmbedder } from "./embeddings.js";
+import type { ProviderEnvironment } from "./providerConfig.js";
 import { reciprocalRankFusion } from "./hybridSearch.js";
 import { investigationQueries } from "./investigationQueries.js";
 import { investigationRunbooks } from "./investigationRunbooks.js";
@@ -14,10 +15,14 @@ export interface InvestigationRetrieval {
 
 export async function retrieveInvestigationEvidence(
   context: NormalizedFailureContext,
-  env: Pick<Env, "OPENAI_API_KEY" | "VECTORIZE">,
+  env: Pick<Env, "VECTORIZE"> & ProviderEnvironment,
   signal?: AbortSignal,
+  queryOverride?: string,
 ): Promise<InvestigationRetrieval> {
-  const query = investigationQueries(context)[0]?.text ?? context.kind;
+  const query = (queryOverride ?? investigationQueries(context)[0]?.text ?? context.kind).slice(
+    0,
+    1600,
+  );
   const eligible = investigationRunbooks.filter((chunk) => chunk.kinds.includes(context.kind));
   const keywordIds = searchRunbooks(eligible, query, 6).map((chunk) => chunk.id);
   const warnings: InvestigationRetrieval["warnings"] = [];
@@ -45,7 +50,7 @@ export async function retrieveInvestigationEvidence(
             ? AbortSignal.any([signal, AbortSignal.timeout(8000)])
             : AbortSignal.timeout(8000),
         });
-      const vector = await createEmbedder(env.OPENAI_API_KEY, timedFetch).embed(query);
+      const vector = await createEnvEmbedder(env, timedFetch).embed(query);
       const result = await boundedVectorQuery(env.VECTORIZE.query(vector, { topK: 8 }), signal);
       const eligibleIds = new Set(eligible.map((chunk) => chunk.id));
       const vectorIds = result.matches.map((match) => match.id).filter((id) => eligibleIds.has(id));

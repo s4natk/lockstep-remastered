@@ -425,3 +425,83 @@ test("keeps structured log envelopes distinct from network and HTTP responses", 
   assert.equal(normalize('{"status":500,"message":"HTTP 500 from upstream"}').kind, "http_error");
   assert.equal(normalize("ETIMEDOUT upstream").kind, "http_error");
 });
+
+test("groups log timelines and attaches language frames to their original event", () => {
+  const context = normalize(
+    "2026-11-02T10:00:00Z INFO request started\n2026-11-02T10:00:01Z ERROR NullPointerException\n    at app.Users.load(Users.java:42)\n    at app.Main.main(Main.java:7)\n2026-11-02T10:00:02Z WARN request abandoned",
+    "application_log",
+  );
+  assert.equal(context.logEvents?.length, 3);
+  assert.equal(context.logEvents?.[1]?.timestamp, "2026-11-02T10:00:01Z");
+  assert.equal(context.logEvents?.[1]?.severity, "error");
+  assert.deepEqual(context.logEvents?.[1]?.evidenceIds, ["input:2", "input:3", "input:4"]);
+  assert.equal(context.logEvents?.[1]?.stackFrames[0]?.file, "Users.java");
+  assert.equal(context.logEvents?.[1]?.stackFrames[0]?.line, 42);
+  assert.equal(context.stackFrames.length, 2);
+});
+
+test("preserves structured event identifiers and embedded stack provenance", () => {
+  const context = normalize(
+    JSON.stringify({
+      level: "error",
+      message: "user lookup failed",
+      timestamp: "2026-11-02T10:00:01Z",
+      service: "api",
+      requestId: "fixture-request",
+      trace_id: "fixture-trace",
+      err: { stack: "TypeError: user is undefined\n    at lookup (users.ts:12:4)" },
+    }),
+  );
+  assert.equal(context.kind, "application_log");
+  assert.equal(context.logEvents?.[0]?.requestId, "fixture-request");
+  assert.equal(context.logEvents?.[0]?.traceId, "fixture-trace");
+  assert.equal(context.logEvents?.[0]?.service, "api");
+  assert.equal(context.logEvents?.[0]?.stackFrames[0]?.evidenceId, "input:1");
+  assert.equal(context.logEvents?.[0]?.stackFrames[0]?.file, "users.ts");
+  assert.equal(normalize("CRITICAL service unavailable").logEvents?.[0]?.severity, "critical");
+  assert.equal(normalize("SEVERE dependency failure").logEvents?.[0]?.severity, "error");
+});
+
+test("validates report log timeline references and rejects invalid frame locations", () => {
+  const event = {
+    id: "log:1",
+    severity: "error",
+    message: "Request failed",
+    timestamp: "2026-11-02T10:00:01Z",
+    evidenceIds: ["input:1"],
+    stackFrames: [],
+  };
+  assert.equal(isInvestigationReport({ ...report, logEvents: [event] }), true);
+  assert.equal(
+    isInvestigationReport({ ...report, logEvents: [{ ...event, evidenceIds: ["invented"] }] }),
+    false,
+  );
+  assert.equal(
+    isInvestigationReport({
+      ...report,
+      logEvents: [
+        {
+          ...event,
+          stackFrames: [
+            { language: "java", file: "Users.java", line: Infinity, evidenceId: "input:1" },
+          ],
+        },
+      ],
+    }),
+    false,
+  );
+  const extreme = normalize("TypeError: failure\n    at load (app.ts:" + "9".repeat(1_000) + ":4)");
+  assert.equal(extreme.stackFrames.length, 0);
+});
+
+test("normalizes SQLite constraint and schema diagnostics as database failures", () => {
+  for (const raw of [
+    "SQLITE_CONSTRAINT_UNIQUE: UNIQUE constraint failed: users.email",
+    "sqlite3.OperationalError: no such table: customers",
+  ]) {
+    const result = normalize(raw);
+    assert.equal(result.kind, "database_error");
+    assert.equal(result.metadata.database, "SQLite diagnostic");
+    assert.ok(result.findings.some((finding) => finding.code === "database.error"));
+  }
+});

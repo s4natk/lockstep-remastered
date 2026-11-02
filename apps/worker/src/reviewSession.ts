@@ -1,5 +1,6 @@
-import { streamAssistantReply } from "./assistantChat.js";
-import { createEmbedder } from "./embeddings.js";
+﻿import { streamAssistantReply } from "./assistantChat.js";
+import { createEnvEmbedder } from "./embeddings.js";
+import { providerConfig } from "./providerConfig.js";
 import type { Env } from "./env.js";
 import { hybridSearch } from "./hybridSearch.js";
 import { looksLikeMigration } from "./migrationDetect.js";
@@ -104,7 +105,8 @@ export class ReviewSession implements DurableObject {
     send(server, { type: "intent", intent: "chat", sessionId });
     let reply = "";
     try {
-      for await (const token of streamAssistantReply(text, this.env.OPENAI_API_KEY)) {
+      const config = providerConfig(this.env);
+      for await (const token of streamAssistantReply(text, config.apiKey, fetch, config)) {
         reply += token;
         send(server, { type: "token", content: token });
       }
@@ -139,11 +141,11 @@ export class ReviewSession implements DurableObject {
           hybridSearch({
             chunks: runbookChunks,
             query,
-            embedder: createEmbedder(this.env.OPENAI_API_KEY),
+            embedder: createEnvEmbedder(this.env),
             vectorize: this.env.VECTORIZE,
             limit: 3,
           }),
-        model: createReviewModel(this.env.OPENAI_API_KEY),
+        model: createReviewModel(this.env.OPENAI_API_KEY, fetch, providerConfig(this.env)),
       },
       context,
     )) {

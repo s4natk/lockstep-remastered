@@ -5,6 +5,8 @@ import type { FailureKind } from "./investigation.js";
 export function detectFailureKind(input: string): FailureKind {
   const text = plainText(input);
   if (isStructuredLog(text)) return "application_log";
+  if (/\bSQLITE_[A-Z_]+\b|sqlite3\.(?:OperationalError|IntegrityError|DatabaseError):/i.test(text))
+    return "database_error";
   if (
     /\b(?:SQLSTATE|PostgreSQL|psycopg\d?|PG::\w+|SequelizeDatabaseError)\b|(?:ERROR|FATAL):\s*(?:relation|column|duplicate key|deadlock|syntax error|password authentication|permission denied for|connection|remaining connection|current transaction|canceling statement)|violates (?:foreign key|not-null|unique) constraint/i.test(
       text,
@@ -41,7 +43,7 @@ export function detectFailureKind(input: string): FailureKind {
     return "runtime_exception";
   }
   if (
-    /^\s*\{[^\n]*"(?:level|severity|message|msg)"\s*:|^\s*\d{4}-\d\d-\d\d[T ][^\n]+|\b(?:ERROR|WARN|FATAL|INFO|DEBUG)\b/m.test(
+    /^\s*\{[^\n]*"(?:level|severity|message|msg)"\s*:|^\s*\d{4}-\d\d-\d\d[T ][^\n]+|\b(?:ERROR|WARN|FATAL|CRITICAL|SEVERE|INFO|DEBUG|TRACE)\b/m.test(
       text,
     )
   ) {

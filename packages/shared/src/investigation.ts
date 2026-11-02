@@ -28,7 +28,7 @@ export interface EvidenceProvenance {
 
 export interface Evidence {
   id: string;
-  kind: "input" | "runbook" | "sql_parser";
+  kind: "input" | "runbook" | "sql_parser" | "context";
   label: string;
   content: string;
   provenance: EvidenceProvenance;
@@ -55,7 +55,20 @@ export interface StackFrame {
   evidenceId: string;
 }
 
+export interface LogEvent {
+  id: string;
+  severity: "trace" | "debug" | "info" | "warning" | "error" | "fatal" | "critical" | "unknown";
+  message: string;
+  timestamp?: string;
+  service?: string;
+  requestId?: string;
+  traceId?: string;
+  evidenceIds: string[];
+  stackFrames: StackFrame[];
+}
+
 export interface NormalizedFailureContext {
+  logEvents?: LogEvent[];
   schemaVersion: 1;
   input: InvestigationInput;
   kind: FailureKind;
@@ -88,6 +101,8 @@ export interface GuidanceStep {
 }
 
 export interface InvestigationReport {
+  logEvents?: LogEvent[];
+  assistantAnswer?: string;
   schemaVersion: 1;
   sessionId: string;
   kind: FailureKind;

@@ -49,4 +49,4 @@ jobs:
       - run: cargo test --locked --manifest-path packages/sql_guard/Cargo.toml
       - run: cargo check --locked --target wasm32-unknown-unknown --manifest-path packages/sql_guard/Cargo.toml
       - run: cargo install wasm-pack --locked --version 0.15.0
-      - run: wasm-pack build packages/sql_guard --target web --release --out-dir ../../.git/wasm-check
+      - run: node scripts/build-sql-wasm.mjs

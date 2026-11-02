@@ -40,6 +40,7 @@ export function validateInvestigationDraft(
     Object.keys(value).some(
       (key) =>
         ![
+          "assistantAnswer",
           "summary",
           "primaryHypothesis",
           "alternatives",
@@ -50,6 +51,9 @@ export function validateInvestigationDraft(
           "limitations",
         ].includes(key),
     ) ||
+    (value.assistantAnswer !== undefined &&
+      (!text(value.assistantAnswer, 20_000) ||
+        !validateAnswerCitations(value.assistantAnswer, context))) ||
     !text(value.summary) ||
     !(value.primaryHypothesis === null || hypothesis(value.primaryHypothesis)) ||
     !Array.isArray(value.alternatives) ||
@@ -103,6 +107,7 @@ export const investigationDraftSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
+    assistantAnswer: { type: "string" },
     summary: { type: "string" },
     primaryHypothesis: { anyOf: [hypothesisSchema, { type: "null" }] },
     alternatives: { type: "array", items: hypothesisSchema },
@@ -113,6 +118,7 @@ export const investigationDraftSchema = {
     limitations: strings,
   },
   required: [
+    "assistantAnswer",
     "summary",
     "primaryHypothesis",
     "alternatives",
@@ -123,3 +129,14 @@ export const investigationDraftSchema = {
     "limitations",
   ],
 };
+
+export function validateAnswerCitations(
+  answer: string,
+  context: NormalizedFailureContext,
+): boolean {
+  const known = new Set(context.evidence.map((item) => item.id));
+  const references = [
+    ...answer.matchAll(/(?<!\\)\[([A-Za-z][A-Za-z0-9_.-]*:[^\]\s]{1,255})\]/g),
+  ].map((match) => match[1]!);
+  return references.every((id) => known.has(id));
+}

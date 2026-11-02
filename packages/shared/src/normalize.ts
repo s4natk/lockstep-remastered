@@ -89,6 +89,12 @@ export function normalizeFailure(value: InvestigationInput): NormalizedFailureCo
         "At least one log line resembles JSON but is malformed; its original text was retained.",
     });
   }
+  if (details.metadata.logEventsOmitted)
+    warnings.push({
+      code: "log_event_limit",
+      message:
+        "Only the first 128 structured log events are included. Original source lines remain bounded and inspectable.",
+    });
   if (omittedLines) {
     warnings.push({
       code: "evidence_limit",

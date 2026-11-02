@@ -3,7 +3,8 @@ import type { DeterministicFinding, NormalizedFailureContext } from "./investiga
 export type ParsedFailureDetails = Pick<
   NormalizedFailureContext,
   "errorMessages" | "findings" | "stackFrames" | "metadata"
->;
+> &
+  Pick<NormalizedFailureContext, "logEvents">;
 
 export function emptyDetails(): ParsedFailureDetails {
   return { errorMessages: [], findings: [], stackFrames: [], metadata: {} };

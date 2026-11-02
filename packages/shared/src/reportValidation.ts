@@ -39,7 +39,7 @@ function source(value: unknown): boolean {
     !text(value.id, 256) ||
     !value.id ||
     typeof value.kind !== "string" ||
-    !["input", "runbook", "sql_parser"].includes(value.kind) ||
+    !["input", "runbook", "sql_parser", "context"].includes(value.kind) ||
     !text(value.label, 1_024) ||
     !text(value.content)
   )
@@ -107,10 +107,39 @@ export function isInvestigationReport(value: unknown): value is InvestigationRep
     )
   )
     return false;
+  if (value.assistantAnswer !== undefined && !text(value.assistantAnswer, 20_000)) return false;
   if (!collection(value.evidence, source)) return false;
   const evidence = value.evidence as Record<string, unknown>[];
   const knownIds = new Set(evidence.map((item) => item.id as string));
   if (knownIds.size !== evidence.length) return false;
+  const frame = (entry: unknown): boolean =>
+    isRecord(entry) &&
+    text(entry.file) &&
+    ["python", "javascript", "java", "rust"].some((language) => language === entry.language) &&
+    text(entry.evidenceId, 256) &&
+    knownIds.has(entry.evidenceId) &&
+    (entry.line === undefined ||
+      (typeof entry.line === "number" && Number.isSafeInteger(entry.line) && entry.line > 0)) &&
+    (entry.column === undefined ||
+      (typeof entry.column === "number" &&
+        Number.isSafeInteger(entry.column) &&
+        entry.column > 0)) &&
+    (entry.function === undefined || text(entry.function));
+  const logEvent = (entry: unknown): boolean =>
+    isRecord(entry) &&
+    text(entry.id, 256) &&
+    ["trace", "debug", "info", "warning", "error", "fatal", "critical", "unknown"].some(
+      (severity) => severity === entry.severity,
+    ) &&
+    text(entry.message) &&
+    ["timestamp", "service", "requestId", "traceId"].every(
+      (key) => entry[key] === undefined || text(entry[key]),
+    ) &&
+    references(entry.evidenceIds, knownIds) &&
+    Array.isArray(entry.evidenceIds) &&
+    entry.evidenceIds.length > 0 &&
+    collection(entry.stackFrames, frame, 128);
+  if (value.logEvents !== undefined && !collection(value.logEvents, logEvent, 128)) return false;
   const hypothesis = (entry: unknown): boolean =>
     isRecord(entry) &&
     text(entry.id, 256) &&

@@ -7,6 +7,7 @@ export function parseDatabaseFailure(evidence: Evidence[]): ParsedFailureDetails
   result.metadata.database = "PostgreSQL-compatible diagnostic";
   for (const item of evidence) {
     const text = plainText(item.content).trim();
+    if (/SQLITE_|sqlite3\./i.test(text)) result.metadata.database = "SQLite diagnostic";
     const sqlstate = text.match(/\bSQLSTATE\s*[[(":=]*\s*([A-Z0-9]{5})\b/i);
     if (sqlstate?.[1]) {
       result.metadata.sqlstate = sqlstate[1].toUpperCase();
@@ -18,7 +19,7 @@ export function parseDatabaseFailure(evidence: Evidence[]): ParsedFailureDetails
       );
     }
     if (
-      /\b(?:ERROR|FATAL|DETAIL|HINT):|(?:psycopg\d?|PG::|SequelizeDatabaseError)|violates (?:foreign key|not-null|unique) constraint/i.test(
+      /\bSQLITE_[A-Z_]+:|sqlite3\.(?:OperationalError|IntegrityError|DatabaseError):|UNIQUE constraint failed:|\b(?:ERROR|FATAL|DETAIL|HINT):|(?:psycopg\d?|PG::|SequelizeDatabaseError)|violates (?:foreign key|not-null|unique) constraint/i.test(
         text,
       )
     ) {

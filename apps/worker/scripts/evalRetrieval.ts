@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createEmbedder } from "../src/embeddings.js";
+import { createEnvEmbedder } from "../src/embeddings.js";
 import { hybridSearch } from "../src/hybridSearch.js";
 
 const runbookDir = join(dirname(fileURLToPath(import.meta.url)), "../../../eval/runbooks");
@@ -18,7 +18,11 @@ const questions = JSON.parse(readFileSync(join(runbookDir, "questions.json"), "u
 }>;
 
 const apiKey = process.env.OPENAI_API_KEY;
-const embedder = createEmbedder(apiKey);
+const embedder = createEnvEmbedder({
+  OPENAI_API_KEY: apiKey,
+  OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+  OPENAI_EMBEDDING_MODEL: process.env.OPENAI_EMBEDDING_MODEL,
+});
 let hits = 0;
 const misses: string[] = [];
 for (const question of questions) {
@@ -31,7 +35,7 @@ for (const question of questions) {
 }
 
 const recall = questions.length === 0 ? 0 : hits / questions.length;
-console.log(`embedder ${apiKey ? "openai" : "local-hash"}`);
+console.log(`embedder ${apiKey?.trim() ? "provider" : "local-hash"}`);
 console.log(`recall@3 ${hits}/${questions.length} ${recall.toFixed(3)}`);
 if (misses.length > 0) {
   console.log(`misses ${misses.join(",")}`);

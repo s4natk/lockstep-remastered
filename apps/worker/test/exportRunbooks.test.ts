@@ -25,17 +25,35 @@ try {
   await assert.rejects(() => readFile(output));
   await assert.rejects(() => exportRunbooks(output, { apiKey: " " }), /OPENAI_API_KEY/);
   const embeddedInputs: string[] = [];
-  const fakeFetch: typeof fetch = async (_url, init) => {
-    const request = JSON.parse(String(init?.body)) as { input: string; dimensions: number };
+  const providerRequests: Array<{ url: string; model: string }> = [];
+  const fakeFetch: typeof fetch = async (url, init) => {
+    const request = JSON.parse(String(init?.body)) as {
+      input: string;
+      dimensions: number;
+      model: string;
+    };
     assert.equal(request.dimensions, 64);
+    providerRequests.push({ url: String(url), model: request.model });
     embeddedInputs.push(request.input);
     return Response.json({
       data: [{ embedding: Array.from({ length: 64 }, (_, index) => index / 100) }],
     });
   };
   assert.equal(
-    await exportRunbooks(output, { apiKey: "test-key", fetchImpl: fakeFetch }),
+    await exportRunbooks(output, {
+      apiKey: "test-key",
+      fetchImpl: fakeFetch,
+      baseUrl: "https://proxy.example.test/v1",
+      embeddingModel: "custom-embedding-model",
+    }),
     investigationRunbooks.length,
+  );
+  assert.ok(
+    providerRequests.every(
+      (request) =>
+        request.url === "https://proxy.example.test/v1/embeddings" &&
+        request.model === "custom-embedding-model",
+    ),
   );
   const records = (await readFile(output, "utf8"))
     .trim()
@@ -73,7 +91,7 @@ try {
   );
   await assert.rejects(() => readFile(failed));
   console.log(
-    "Runbook export: required credentials, public-only corpus, Vectorize IDs/dimensions, provider failures and overwrite protection passed",
+    "Runbook export: required credentials, public-only corpus, Vectorize IDs/dimensions, custom provider settings, provider failures and overwrite protection passed",
   );
 } finally {
   for (const filename of ["runbooks.ndjson", "existing.ndjson", "failed.ndjson"]) {

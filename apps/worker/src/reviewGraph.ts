@@ -1,4 +1,4 @@
-import { ChatPromptTemplate } from "@langchain/core/prompts";
+﻿import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import type { Citation, Hazard, ParseResult, RunbookChunk } from "@lockstep/shared";
 
@@ -81,13 +81,21 @@ export function mockReviewModel(): ReviewModel {
 export function createReviewModel(
   apiKey: string | undefined,
   fetchImpl: typeof fetch = fetch,
+  options: { baseUrl?: string; model?: string } = {},
 ): ReviewModel {
-  if (apiKey === undefined || apiKey === "") {
+  const key = apiKey?.trim();
+  if (!key) {
     return mockReviewModel();
   }
   return {
     async *stream(input) {
-      yield* streamOpenAiChat({ apiKey, prompt: input.prompt, fetchImpl });
+      yield* streamOpenAiChat({
+        apiKey: key,
+        prompt: input.prompt,
+        fetchImpl,
+        model: options.model,
+        baseUrl: options.baseUrl,
+      });
     },
   };
 }

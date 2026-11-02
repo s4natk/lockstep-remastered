@@ -1,4 +1,4 @@
-const CHAT_URL = "https://api.openai.com/v1/chat/completions";
+﻿import { providerBaseUrl } from "./providerConfig.js";
 
 export async function* readChatDeltaStream(
   body: ReadableStream<Uint8Array>,
@@ -56,9 +56,10 @@ export async function* streamOpenAiChat(options: {
   prompt: string;
   fetchImpl?: typeof fetch;
   model?: string;
+  baseUrl?: string;
 }): AsyncGenerator<string> {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const response = await fetchImpl(CHAT_URL, {
+  const response = await fetchImpl(`${providerBaseUrl(options.baseUrl)}/chat/completions`, {
     method: "POST",
     signal: AbortSignal.timeout(25_000),
     headers: {
