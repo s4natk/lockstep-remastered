@@ -14,6 +14,22 @@ const provider = createServer(async (req, res) => {
   assert.equal(req.headers.authorization, "Bearer controlled-test-key");
   assert.equal(payload.stream, true);
   const prompt = JSON.stringify(payload.messages);
+  const userPrompt = payload.messages.at(-1)?.content ?? "";
+  const latestQuestion = userPrompt.split("Latest question (untrusted data):\n").at(-1).trim();
+  if (latestQuestion.includes("CONTROLLED_QUOTA")) {
+    res.writeHead(429, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        error: {
+          message: "PRIVATE_PROVIDER_FAILURE_DETAIL_DO_NOT_EXPOSE controlled-test-key",
+          type: "insufficient_quota",
+          code: "insufficient_quota",
+        },
+      }),
+    );
+    return;
+  }
+  const greeting = latestQuestion === "hi";
   const slow =
     prompt.includes("CONTROLLED_SLOW_TURN") && !prompt.includes("CONTROLLED_SUCCESSOR_TURN");
   const invalid = JSON.stringify(payload.messages).includes("CONTROLLED_INVALID_CITATION");
@@ -51,6 +67,19 @@ const provider = createServer(async (req, res) => {
     confidence: "low",
     limitations: ["The excerpt does not establish the origin of the missing value."],
   };
+  if (greeting)
+    Object.assign(draft, {
+      assistantAnswer:
+        "Hello! I can help debug errors, failing tests, logs, or relevant code. What are you working on?",
+      summary: "The conversation has started without a failure excerpt.",
+      primaryHypothesis: null,
+      alternatives: [],
+      remediation: [],
+      verification: [],
+      missingInformation: ["An error, relevant code, or debugging question"],
+      confidence: "low",
+      limitations: ["No technical failure has been supplied."],
+    });
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-store" });
   const source = JSON.stringify(draft);
   const send = (content, finish_reason = null) =>
@@ -183,8 +212,81 @@ try {
   assert.equal(successorEvents.find((event) => event.type === "message")?.message.mode, "ai");
   assert.equal(successorEvents.at(-1).type, "done");
   assert.equal(calls.length, 5);
+
+  const greetingThread = await create();
+  const greetingResponse = await send(greetingThread.id, "hi");
+  assert.equal(greetingResponse.status, 200);
+  const greetingEvents = read(await greetingResponse.text());
+  const greetingMessage = greetingEvents.find((event) => event.type === "message")?.message;
+  assert.equal(greetingMessage?.mode, "ai");
+  assert.equal(greetingMessage.status, "complete");
+  assert.equal(greetingMessage.report.kind, "unknown");
+  assert.equal(greetingMessage.report.primaryHypothesis, null);
+  assert.deepEqual(greetingMessage.report.remediation, []);
+  assert.deepEqual(greetingMessage.report.verification, []);
+  assert.match(greetingMessage.content, /^Hello!/);
+  assert.ok(
+    !greetingMessage.report.warnings.some((warning) => warning.code === "provider_fallback"),
+  );
+  assert.equal(greetingEvents.at(-1).type, "done");
+  const reopenedGreeting = await call(`/api/threads/${greetingThread.id}`);
+  const savedGreeting = await reopenedGreeting.json();
+  assert.equal(savedGreeting.messages.length, 2);
+  assert.equal(savedGreeting.messages[0].content, "hi");
+  assert.equal(savedGreeting.messages[1].content, greetingMessage.content);
+  assert.equal(savedGreeting.messages[1].mode, "ai");
+
+  const introducedFailure =
+    "TypeError: Cannot read properties of undefined (reading 'id')\n    at lookupProfile (src/profile.ts:11:5)";
+  const investigation = await send(greetingThread.id, introducedFailure);
+  assert.equal(investigation.status, 200);
+  const investigationMessage = read(await investigation.text()).find(
+    (event) => event.type === "message",
+  )?.message;
+  assert.equal(investigationMessage?.mode, "ai");
+  assert.equal(investigationMessage.report.kind, "runtime_exception");
+  assert.ok(
+    investigationMessage.report.observations.some((finding) =>
+      finding.message.includes("TypeError"),
+    ),
+  );
+  assert.ok(
+    investigationMessage.report.evidence.some((item) =>
+      item.content.includes("src/profile.ts:11:5"),
+    ),
+  );
+  const verifyQuestion = "How should I verify the caller now?";
+  const afterGreetingFollowup = await send(greetingThread.id, verifyQuestion);
+  assert.equal(afterGreetingFollowup.status, 200);
+  const followupMessage = read(await afterGreetingFollowup.text()).find(
+    (event) => event.type === "message",
+  )?.message;
+  assert.equal(followupMessage?.mode, "ai");
+  assert.equal(followupMessage.report.kind, "runtime_exception");
+  assert.ok(
+    followupMessage.report.observations.some((finding) => finding.message.includes("TypeError")),
+  );
+  assert.ok(
+    followupMessage.report.evidence.some((item) => item.content.includes("src/profile.ts:11:5")),
+  );
+  const afterGreetingPrompt = JSON.stringify(calls.at(-1).messages);
+  assert.ok(afterGreetingPrompt.includes(verifyQuestion));
+  assert.ok(afterGreetingPrompt.includes("lookupProfile"));
+  const reopenedInvestigation = await call(`/api/threads/${greetingThread.id}`);
+  assert.equal((await reopenedInvestigation.json()).messages.length, 6);
+
+  const quotaThread = await create();
+  const quota = await send(quotaThread.id, "TypeError: undefined CONTROLLED_QUOTA");
+  assert.equal(quota.status, 200);
+  const quotaBody = await quota.text();
+  const quotaMessage = read(quotaBody).find((event) => event.type === "message")?.message;
+  assert.equal(quotaMessage?.mode, "deterministic");
+  assert.ok(quotaMessage.report.warnings.some((warning) => warning.code === "provider_quota"));
+  assert.ok(!quotaBody.includes("PRIVATE_PROVIDER_FAILURE_DETAIL_DO_NOT_EXPOSE"));
+  assert.ok(!quotaBody.includes("controlled-test-key"));
+  assert.equal(calls.length, 9);
   console.log(
-    "Controlled provider API: real HTTP SSE text, consistent custom model/base URL, persisted follow-up environment, citation fallback and turn-specific live cancellation passed; no external model calls",
+    "Controlled provider API: real HTTP SSE text, consistent custom model/base URL, persisted follow-up environment, citation fallback, greeting persistence and transition to investigation, safe quota diagnostics, and turn-specific live cancellation passed; no external model calls",
   );
 } finally {
   await worker.stop();

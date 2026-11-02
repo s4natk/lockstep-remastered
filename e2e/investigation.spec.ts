@@ -88,7 +88,7 @@ for (const id of [
     await investigate(page, id);
     await expect(page.locator(".ls-assistant-turn").last()).toContainText("Deterministic guidance");
     await expect(page.locator(".ls-assistant-turn").last()).toContainText(
-      "AI diagnosis was unavailable",
+      "no model-generated answer was used",
     );
     await page
       .locator(".ls-answer-tools")
@@ -280,7 +280,16 @@ test("cancellation does not resubmit and the saved thread can be recovered", asy
   await expect(page.getByRole("textbox", { name: "Message Lockstep" })).toBeEnabled();
 });
 
-test("the validated final answer replaces provisional output", async ({ page }) => {
+test("the validated fallback replaces provisional text and explains a failed provider request", async ({
+  page,
+}, info) => {
+  await page.route("**/health", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, openai: { configured: true } }),
+    }),
+  );
   let savedThread: unknown = null;
   await page.route("**/api/threads/*", async (route) => {
     if (route.request().method() === "GET" && savedThread)
@@ -295,6 +304,11 @@ test("the validated final answer replaces provisional output", async ({ page }) 
     const threadId = new URL(route.request().url()).pathname.split("/")[3]!;
     const input = route.request().postDataJSON();
     const now = new Date().toISOString();
+    const report = fixtureReport();
+    report.warnings = [
+      { code: "provider_fallback", message: "Deterministic guidance replaced provisional text." },
+      { code: "provider_authentication", message: "The provider rejected authentication." },
+    ];
     const message = {
       id: "mock-answer",
       threadId,
@@ -303,7 +317,7 @@ test("the validated final answer replaces provisional output", async ({ page }) 
       createdAt: now,
       status: "complete",
       mode: "deterministic",
-      report: fixtureReport(),
+      report,
       clientTurnId: input.clientTurnId,
       contextIds: [],
     };
@@ -351,6 +365,22 @@ test("the validated final answer replaces provisional output", async ({ page }) 
   await page.getByRole("textbox", { name: "Message Lockstep" }).fill("TypeError: failed");
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   await expect(page.getByText("Validated final answer.", { exact: true })).toBeVisible();
+  await expect(page.locator(".ls-service-status")).toContainText("AI key present");
+  await expect(page.locator(".ls-service-status")).toContainText(
+    "Saved response used deterministic guidance",
+  );
+  await expect(page.locator(".ls-assistant-turn .ls-answer-mode")).toHaveText(
+    "Deterministic fallback",
+  );
+  await expect(page.locator(".ls-deterministic-note")).toContainText(
+    "provider rejected authentication",
+  );
+  await contrast(page.locator(".ls-deterministic-note"));
+  await page.screenshot({ path: info.outputPath("fallback-desktop.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noOverflow(page);
+  await expect(page.locator(".ls-deterministic-note")).toBeVisible();
+  await page.screenshot({ path: info.outputPath("fallback-mobile.png"), fullPage: true });
   await expect(page.getByText("PROVISIONAL_UNSUPPORTED_CLAIM", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "Message Lockstep" })).toBeEnabled();
 });
@@ -422,4 +452,31 @@ test("SQLite failures receive a database investigation in the shared agent", asy
     .click();
   await page.getByRole("tab", { name: "Report", exact: true }).click();
   await expect(page.locator(".ls-report-detail")).toContainText(/SQLite|constraint|unique/i);
+});
+
+test("a built-in greeting stays honest and persists without inventing a failure", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await send(page, "hi");
+  const answer = page.locator(".ls-assistant-turn").last();
+  await expect(answer).toContainText("Hi! I'm Lockstep");
+  await expect(answer).toContainText(
+    "This is a built-in reply; a live AI model did not generate it.",
+  );
+  await expect(answer.locator(".ls-answer-mode")).toHaveText("Deterministic guidance");
+  await expect(answer).not.toContainText("The submitted excerpt does not identify");
+  const content = await answer.locator(".ls-rich-text").first().textContent();
+  const url = page.url();
+  await page.reload();
+  await expect(page.locator(".ls-assistant-turn")).toHaveCount(1);
+  await expect(page.locator(".ls-assistant-turn .ls-rich-text").first()).toHaveText(content!);
+  expect(page.url()).toBe(url);
+  await page
+    .locator(".ls-answer-tools")
+    .getByRole("button", { name: "Structured report", exact: true })
+    .click();
+  await expect(page.locator(".ls-report-detail")).toContainText(
+    "There is not enough evidence to establish a likely cause.",
+  );
 });

@@ -142,6 +142,12 @@ export function deterministicAnswer(
   options: DeterministicAnswerContext = {},
 ): string {
   const question = (options.question ?? context.input.description ?? "").slice(0, 8000);
+  const greeting = (question.trim() || context.input.rawInput.trim()).toLowerCase();
+  if (
+    context.kind === "unknown" &&
+    /^(hi|hello|hey|hiya|howdy|good morning|good afternoon|good evening)[!.?\s]*$/.test(greeting)
+  )
+    return "Hi! I'm Lockstep, your debugging sidekick. Share an error, a failing test, a log, or a SQL migration, and tell me what you expected to happen. You can also attach project context.\n\n*This is a built-in reply; a live AI model did not generate it.*";
   const lower = question.toLowerCase();
   const followup = Boolean(options.conversation?.some((message) => message.role === "assistant"));
   const finding =

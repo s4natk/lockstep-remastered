@@ -60,11 +60,11 @@ export function validateInvestigationDraft(
     value.alternatives.length > 4 ||
     !value.alternatives.every(hypothesis) ||
     !Array.isArray(value.remediation) ||
-    value.remediation.length === 0 ||
+    (context.kind !== "unknown" && value.remediation.length === 0) ||
     value.remediation.length > 8 ||
     !value.remediation.every(guidance) ||
     !Array.isArray(value.verification) ||
-    value.verification.length === 0 ||
+    (context.kind !== "unknown" && value.verification.length === 0) ||
     value.verification.length > 8 ||
     !value.verification.every(guidance) ||
     !texts(value.missingInformation) ||

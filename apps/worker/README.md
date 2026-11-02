@@ -17,6 +17,10 @@ SQL hazard analysis, evidence retrieval, investigation, and report-validation no
 Retrieval uses a LangChain retriever and runnable sequence. Curated runbooks use keyword
 retrieval with optional embedding/vector enrichment; local keyword fallback is labelled.
 
+Greetings and other turns without a recognized failure can return a conversational
+answer without inventing an incident or mandatory remediation steps. Recognized
+failures retain evidence-backed remediation and verification requirements.
+
 A thread turn combines the latest question, the relevant original failure, a bounded
 recent conversation, saved environment details, and owner-scoped context evidence.
 Pinned documents enter the bounded turn context. Other documents in that owner's

@@ -18,6 +18,7 @@ import { AgentMark, Icon, CopyControl, SidePanel } from "./Primitives";
 import { RichText } from "./RichText";
 import { ReportPanel } from "./ReportPanel";
 import { KnowledgePanel } from "./KnowledgePanel";
+import { ServiceStatus, ResponseMode, FallbackNotice } from "./ResponseStatus";
 const exampleCards = [
   {
     id: "python",
@@ -183,27 +184,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
           <Icon name="help" />
           How Lockstep works
         </Link>
-        <div className="ls-service-status" data-state={state.connection}>
-          <span className="ls-service-dot" />
-          <span>
-            {state.connection === "checking"
-              ? "Checking service"
-              : state.connection === "ai"
-                ? "AI configured"
-                : state.connection === "evidence"
-                  ? "Evidence mode"
-                  : "Service offline"}
-            <small>
-              {state.connection === "ai"
-                ? "Grounded in your evidence"
-                : state.connection === "evidence"
-                  ? "Deterministic guidance · AI unavailable"
-                  : state.connection === "offline"
-                    ? "Drafts remain in this workspace"
-                    : "Connecting to your backend"}
-            </small>
-          </span>
-        </div>
+        <ServiceStatus connection={state.connection} report={report} />
         <p className="ls-private-note">Private to this browser’s access key.</p>
       </div>
     </>
@@ -426,7 +407,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                 },
                 {
                   title: "Useful even when AI is unavailable.",
-                  text: "Evidence mode uses deterministic parsing and curated guidance. It cannot diagnose a root cause like a configured model can. Missing context, qualitative confidence, and limitations stay visible in each report.",
+                  text: "Deterministic mode uses parsed evidence and curated guidance. AI responses require a successful provider request. Each reply shows the mode actually used, with missing context and limitations available in its report.",
                 },
                 {
                   title: "A workspace you can return to.",
@@ -853,9 +834,7 @@ function Message({
           <AgentMark size={25} />
         </span>
         <strong>Lockstep</strong>
-        <span className="ls-answer-mode">
-          {message.mode === "ai" ? "AI investigation" : "Deterministic guidance"}
-        </span>
+        <ResponseMode report={message.report} mode={message.mode} status={message.status} />
         <CopyControl text={message.content} />
       </div>
       <div className="ls-answer-content">
@@ -867,11 +846,7 @@ function Message({
               : "This turn did not finish. Your evidence is still saved in this thread."}
           </div>
         ) : null}
-        {message.mode === "deterministic" && message.status === "complete" ? (
-          <p className="ls-deterministic-note">
-            Based on parsed facts and guidance. AI diagnosis was unavailable for this turn.
-          </p>
-        ) : null}
+        {message.status === "complete" ? <FallbackNotice report={message.report} /> : null}
         {message.report ? (
           <div className="ls-answer-tools">
             <button type="button" onClick={() => onReport(message.report ?? null, "evidence")}>

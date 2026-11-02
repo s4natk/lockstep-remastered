@@ -289,7 +289,7 @@ kbd {
   flex: none;
 }
 .ls-service-status[data-state="ai"] .ls-service-dot {
-  background: #87d4bd;
+  background: #a4bfff;
 }
 .ls-service-status[data-state="evidence"] .ls-service-dot {
   background: #e8c68d;
@@ -867,7 +867,7 @@ kbd {
   color: #a45a34;
 }
 .ls-deterministic-note {
-  font-size: 9px;
+  font-size: 11px;
   color: #7b6e58;
   margin-top: 14px;
   line-height: 1.8;
@@ -2305,7 +2305,7 @@ kbd {
     display: none;
   }
   .ls-deterministic-note {
-    font-size: 8px;
+    font-size: 11px;
     line-height: 1.9;
     margin-top: 13px;
   }

@@ -13,8 +13,8 @@ in a universal LangGraph workflow. PostgreSQL migrations use a Rust/WebAssembly
 specialist within that same workflow. The application also works without a model
 key, with explicitly labelled deterministic guidance.
 
-[Web app](https://lockstep-remastered.vercel.app) ?
-[API health](https://lockstep-remastered.mrkanwalsanat.workers.dev/health) ?
+[Web app](https://lockstep-remastered.vercel.app) |
+[API health](https://lockstep-remastered.mrkanwalsanat.workers.dev/health) |
 [Deployment guide](docs/deployment.md)
 
 ## Architecture
@@ -60,7 +60,8 @@ The retained SQL API also supports Durable Object sessions and WebSockets.
 ## Features
 
 - **Ongoing investigations:** persistent threads, follow-up questions, recent
-  conversations, private history, cancellation, and interrupted-turn recovery.
+  conversations, private history, cancellation, and interrupted-turn recovery. Start
+  with a greeting or a debugging question, then add a concrete failure when ready.
 - **Project context:** paste or upload UTF-8 code, logs, documents, and notes. Pin
   sources to a conversation while other relevant library material remains searchable.
 - **Inspectable answers:** source references, deterministic findings, alternative
@@ -146,8 +147,15 @@ frontend after local changes; hosted deployments require a rebuild.
    ```
 
 4. Restart `pnpm dev:worker` and submit a non-sensitive sample in the browser.
-   **AI configured** reports configuration presence. A completed **AI investigation**
-   response confirms an actual model request; failures can produce a labelled fallback.
+   **AI key present** reports configuration presence. A completed reply labelled **AI response**
+   confirms an actual model request; failures can produce a labelled fallback.
+
+Fallback responses include a safe reason when the provider rejects credentials,
+reports exhausted API credit or a project limit, rate-limits the request, or returns
+an invalid response. Key presence does not prove available API credit. Check the
+API account's billing and limits for quota errors; repeated retries do not restore
+credit. Provider error bodies and credential values are never included in these
+explanations. See [OpenAI error codes](https://developers.openai.com/api/docs/guides/error-codes).
 
 Keep the key on the server, as required by [OpenAI's authentication guidance](https://developers.openai.com/api/reference/overview#authentication).
 Real `.dev.vars` and `.env.local` files are ignored; their tracked `.example`

@@ -32,6 +32,7 @@ import {
 } from "./investigationRetrieval.js";
 import { validateInvestigationDraft } from "./investigationValidation.js";
 import { providerConfig, type ProviderEnvironment } from "./providerConfig.js";
+import { providerFailureWarning } from "./providerFailure.js";
 
 export interface InvestigationDependencies {
   env: Pick<Env, "VECTORIZE"> & ProviderEnvironment;
@@ -267,12 +268,13 @@ export function compileInvestigationGraph(deps: InvestigationDependencies) {
               },
             ],
           };
-      } catch {
+      } catch (error) {
         deps.signal?.throwIfAborted();
         context = {
           ...context,
           warnings: [
             ...context.warnings,
+            providerFailureWarning(error),
             {
               code: "provider_fallback",
               message:

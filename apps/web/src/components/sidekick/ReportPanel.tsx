@@ -4,6 +4,7 @@ import type { InvestigationReport } from "@lockstep/shared";
 import { SidePanel, Icon } from "./Primitives";
 import { CodeView, RichText } from "./RichText";
 import { downloadFile } from "../../lib/clipboard";
+import { ResponseMode, FallbackNotice } from "./ResponseStatus";
 export function ReportPanel({
   report,
   initialTab = "evidence",
@@ -164,9 +165,7 @@ export function ReportPanel({
       ) : (
         <div className="ls-report-detail">
           <div className="ls-report-mode">
-            <span className="ls-pill">
-              {report.mode === "ai" ? "AI assisted" : "Deterministic analysis"}
-            </span>
+            <ResponseMode report={report} className="ls-pill" />
             <span>{report.confidence} confidence</span>
             <button
               className="ls-icon-button"
@@ -183,6 +182,7 @@ export function ReportPanel({
               <Icon name="download" />
             </button>
           </div>
+          <FallbackNotice report={report} />
           <section>
             <h3>Summary</h3>
             <p>{report.summary}</p>

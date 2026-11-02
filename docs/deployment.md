@@ -163,8 +163,8 @@ dashboard can be overwritten by a later configuration deployment.
 
 Open the production frontend and check the following:
 
-1. Submit a sample error. A completed **AI investigation** response verifies a live
-   provider request; **AI configured** alone does not. Deterministic guidance is
+1. Submit a sample error. A completed reply labelled **AI response** verifies a live
+   provider request; **AI key present** alone does not. Deterministic guidance is
    expected when no provider is configured or a response fails validation.
 2. Ask a follow-up, reload, and reopen the same conversation from history.
 3. Save and pin a small UTF-8 context document. Submit a related question and inspect
@@ -177,15 +177,23 @@ controlled provider responses and do not establish the state of a cloud account.
 
 ## Troubleshooting
 
-| Symptom                                                      | Check                                                                                                                                                                                                                                       |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The frontend says the service is offline                     | Verify the deployed `NEXT_PUBLIC_WORKER_URL`, the Worker `/health` response, and the browser Network tab. Redeploy Vercel after changing its public URL setting.                                                                            |
-| Browser requests fail with a CORS error                      | Set `ALLOWED_ORIGINS` to the exact frontend origin currently in the address bar, then redeploy the Worker. Production and preview domains are separate.                                                                                     |
-| `/health` reports `openai.configured: false`                 | Add a nonempty secret with the literal name `OPENAI_API_KEY` to the same Worker/environment whose URL is being checked. A production secret does not configure localhost.                                                                   |
-| A secret was accidentally named with the key value           | Delete that incorrectly named entry under Worker Settings → Variables and Secrets. Replace the exposed provider key, then add the new value under `OPENAI_API_KEY`. Do not share screenshots or secret-list output containing the old name. |
-| The key is configured but replies use deterministic guidance | Check the selected model, API account access, provider limits, and billing. Configuration presence is not a successful model call.                                                                                                          |
-| The Vercel build cannot find the shared package              | Enable source files outside the Root Directory and keep the workspace files. Use Node.js 24 and the pinned pnpm version through Corepack.                                                                                                   |
-| Database requests fail                                       | Confirm the deployed `DB` binding points to the intended database and apply all remote migrations. Local D1 data is separate.                                                                                                               |
+| Symptom                                                              | Check                                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The frontend says the service is offline                             | Verify the deployed `NEXT_PUBLIC_WORKER_URL`, the Worker `/health` response, and the browser Network tab. Redeploy Vercel after changing its public URL setting.                                                                            |
+| Browser requests fail with a CORS error                              | Set `ALLOWED_ORIGINS` to the exact frontend origin currently in the address bar, then redeploy the Worker. Production and preview domains are separate.                                                                                     |
+| `/health` reports `openai.configured: false`                         | Add a nonempty secret with the literal name `OPENAI_API_KEY` to the same Worker/environment whose URL is being checked. A production secret does not configure localhost.                                                                   |
+| A secret was accidentally named with the key value                   | Delete that incorrectly named entry under Worker Settings → Variables and Secrets. Replace the exposed provider key, then add the new value under `OPENAI_API_KEY`. Do not share screenshots or secret-list output containing the old name. |
+| The key is configured but replies use deterministic guidance         | Read the response's safe provider explanation. Configuration presence does not prove authentication, model access, or available API credit.                                                                                                 |
+| The provider reports an authentication problem                       | Check the Worker secret and the key's API organization/project permissions.                                                                                                                                                                 |
+| The provider reports exhausted API credit or a billing/project limit | Check the API account's credit balance and organization/project spending limits. Repeated retries do not restore quota.                                                                                                                     |
+| The provider reports rate limiting                                   | Wait briefly before retrying and check project request/token limits.                                                                                                                                                                        |
+| The provider cannot find the model or endpoint                       | Verify OPENAI_MODEL, OPENAI_BASE_URL, and access to the selected model.                                                                                                                                                                     |
+| The provider response times out or fails validation                  | The app replaces the provisional draft with deterministic guidance. Retry with a shorter relevant excerpt if appropriate.                                                                                                                   |
+| The Vercel build cannot find the shared package                      | Enable source files outside the Root Directory and keep the workspace files. Use Node.js 24 and the pinned pnpm version through Corepack.                                                                                                   |
+| Database requests fail                                               | Confirm the deployed `DB` binding points to the intended database and apply all remote migrations. Local D1 data is separate.                                                                                                               |
+
+Provider explanations use fixed public messages rather than raw provider errors. For
+OpenAI account and quota failures, see [the official error-code guide](https://developers.openai.com/api/docs/guides/error-codes).
 
 ## Optional semantic retrieval
 
