@@ -6,8 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "An evidence-grounded debugging workspace",
     start_url: "/",
     display: "standalone",
-    background_color: "#faf9f6",
-    theme_color: "#121b2e",
+    background_color: "#070b16",
+    theme_color: "#070b16",
     icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }],
   };
 }

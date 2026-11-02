@@ -18,7 +18,14 @@ export type IconName =
   | "trash"
   | "search"
   | "code"
-  | "download";
+  | "download"
+  | "bug"
+  | "flask"
+  | "pulse"
+  | "database"
+  | "arrowRight"
+  | "chevron"
+  | "shield";
 const paths: Record<IconName, string> = {
   plus: "M10 4v12M4 10h12",
   message: "M4 4h12v9H9l-5 3V4Z",
@@ -38,6 +45,15 @@ const paths: Record<IconName, string> = {
   search: "M9 3a6 6 0 1 0 0 12A6 6 0 0 0 9 3Zm4 10 4 4",
   code: "m7 5-5 5 5 5m6-10 5 5-5 5M11 3 9 17",
   download: "M10 3v10m-4-4 4 4 4-4M4 14v3h12v-3",
+  bug: "M7.5 7a2.5 2.5 0 0 1 5 0M6 9.5h8v3a4 4 0 0 1-8 0v-3ZM10 9.5v7M6 12H3m11 0h3M6.5 15 4 16.5m9.5-1.5 2.5 1.5M6.5 9.5l-2-2m9 2 2-2",
+  flask:
+    "M8 3h4M8.5 3v4.5L4.2 15.3a1.5 1.5 0 0 0 1.3 2.2h9a1.5 1.5 0 0 0 1.3-2.2L11.5 7.5V3M6.3 12h7.4",
+  pulse: "M2 10.5h3.5l2-5 4 9 2-4H18",
+  database:
+    "M4 5.5C4 4.1 6.7 3 10 3s6 1.1 6 2.5S13.3 8 10 8 4 6.9 4 5.5Zm0 0v9C4 15.9 6.7 17 10 17s6-1.1 6-2.5v-9M4 10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5",
+  arrowRight: "M4 10h12m-5-5 5 5-5 5",
+  chevron: "m5 8 5 5 5-5",
+  shield: "M10 2.5 4 5v4.5c0 3.9 2.6 6.6 6 8 3.4-1.4 6-4.1 6-8V5l-6-2.5Z",
 };
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   return (
@@ -56,18 +72,24 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     </svg>
   );
 }
-export function AgentMark({ size = 30 }: { size?: number }) {
+const MARK_TRAIL = "M16.5 9V23H30";
+const MARK_LEAD = "M10 15.5V29.5H19.5";
+export function AgentMark({ size = 30, motion }: { size?: number; motion?: "intro" | "working" }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <rect width="32" height="32" rx="9" fill="currentColor" />
-      <path
-        d="m10 10-5 6 5 6m12-12 5 6-5 6m-4-14-4 16"
-        stroke="var(--mark-ink, #fff)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <span
+      className="ls-mark"
+      data-motion={motion}
+      style={{ width: size, height: size }}
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 40 40" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <path className="ls-mark-trail" d={MARK_TRAIL} pathLength={1} />
+        <path className="ls-mark-comet" d={MARK_TRAIL} pathLength={1} />
+        <path className="ls-mark-lead" d={MARK_LEAD} pathLength={1} />
+        <circle className="ls-mark-ring" cx="26" cy="29.5" r="3.3" />
+        <circle className="ls-mark-dot" cx="26" cy="29.5" r="3.3" />
+      </svg>
+    </span>
   );
 }
 export function CopyControl({ text, label = "Copy answer" }: { text: string; label?: string }) {

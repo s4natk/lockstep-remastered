@@ -40,19 +40,21 @@ export function ResponseMode({
   className?: string;
 }) {
   const actualMode = report?.mode ?? mode;
-  const label =
+  const [label, tone] =
     status !== "complete"
-      ? status === "cancelled"
-        ? "Turn stopped"
-        : "Incomplete response"
+      ? [status === "cancelled" ? "Turn stopped" : "Incomplete response", "stopped"]
       : actualMode === "ai"
-        ? "AI response"
+        ? ["AI response", "ai"]
         : fallbackReason(report)
-          ? "Deterministic fallback"
+          ? ["Deterministic fallback", "fallback"]
           : actualMode === "deterministic"
-            ? "Deterministic guidance"
-            : "Saved response";
-  return <span className={className}>{label}</span>;
+            ? ["Deterministic guidance", "deterministic"]
+            : ["Saved response", "saved"];
+  return (
+    <span className={className} data-tone={tone}>
+      {label}
+    </span>
+  );
 }
 
 export function FallbackNotice({ report }: { report?: ResponseReport }) {
