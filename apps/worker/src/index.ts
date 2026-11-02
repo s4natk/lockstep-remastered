@@ -8,6 +8,8 @@ import { parseMigration, MigrationParseError } from "./parser.js";
 import { ReviewSession } from "./reviewSession.js";
 import { SessionRepository } from "./sessionRepository.js";
 import { investigationApi } from "./investigationApi.js";
+import { threadApi } from "./threadApi.js";
+import { knowledgeApi } from "./knowledgeApi.js";
 import { investigationOwner } from "./investigationRepository.js";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -16,7 +18,7 @@ app.use(
   "*",
   cors({
     origin: (origin, c) => (allowedOrigins(c.env.ALLOWED_ORIGINS).includes(origin) ? origin : null),
-    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
   }),
 );
@@ -39,6 +41,8 @@ app.get("/", (c) => c.json(healthBody(c.env)));
 app.get("/health", (c) => c.json(healthBody(c.env)));
 
 app.route("/api/investigations", investigationApi);
+app.route("/api/threads", threadApi);
+app.route("/api/knowledge", knowledgeApi);
 
 app.use(
   "/api/parse",
