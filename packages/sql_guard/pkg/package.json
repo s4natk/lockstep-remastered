@@ -1,0 +1,17 @@
+{
+  "name": "sql_guard",
+  "type": "module",
+  "description": "DDL hazard classifier for Lockstep",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "sql_guard_bg.wasm",
+    "sql_guard.js",
+    "sql_guard.d.ts"
+  ],
+  "main": "sql_guard.js",
+  "types": "sql_guard.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

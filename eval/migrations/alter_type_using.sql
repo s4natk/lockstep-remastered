@@ -1,0 +1,1 @@
+ALTER TABLE users ALTER COLUMN age TYPE bigint USING age::bigint

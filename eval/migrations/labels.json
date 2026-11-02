@@ -1,0 +1,86 @@
+{
+  "add_not_null_default.sql": {
+    "statements": [{ "index": 0, "code": "safe" }]
+  },
+  "add_not_null_bio.sql": {
+    "statements": [{ "index": 0, "code": "lock_risk" }]
+  },
+  "add_nullable_bio.sql": {
+    "statements": [{ "index": 0, "code": "safe" }]
+  },
+  "add_primary_key_column.sql": {
+    "statements": [{ "index": 0, "code": "lock_risk" }]
+  },
+  "add_timestamptz_default.sql": {
+    "statements": [{ "index": 0, "code": "safe" }]
+  },
+  "alter_age_type.sql": {
+    "statements": [{ "index": 0, "code": "rewrite" }]
+  },
+  "alter_type_using.sql": {
+    "statements": [{ "index": 0, "code": "rewrite" }]
+  },
+  "commented_add_column.sql": {
+    "statements": [{ "index": 0, "code": "safe" }]
+  },
+  "concurrent_index.sql": {
+    "statements": [{ "index": 0, "code": "safe" }]
+  },
+  "create_accounts.sql": {
+    "statements": [{ "index": 0, "code": "safe" }]
+  },
+  "create_index_email.sql": {
+    "statements": [{ "index": 0, "code": "lock_risk" }]
+  },
+  "create_table_then_index.sql": {
+    "statements": [
+      { "index": 0, "code": "safe" },
+      { "index": 1, "code": "lock_risk" }
+    ]
+  },
+  "drop_column_if_exists.sql": {
+    "statements": [{ "index": 0, "code": "data_loss" }]
+  },
+  "drop_email.sql": {
+    "statements": [{ "index": 0, "code": "data_loss" }]
+  },
+  "drop_table_if_exists.sql": {
+    "statements": [{ "index": 0, "code": "data_loss" }]
+  },
+  "drop_table_sessions.sql": {
+    "statements": [{ "index": 0, "code": "data_loss" }]
+  },
+  "insert_user.sql": {
+    "statements": [{ "index": 0, "code": "safe" }]
+  },
+  "mixed_add_then_drop.sql": {
+    "statements": [
+      { "index": 0, "code": "safe" },
+      { "index": 1, "code": "data_loss" }
+    ]
+  },
+  "mixed_index_and_type.sql": {
+    "statements": [
+      { "index": 0, "code": "lock_risk" },
+      { "index": 1, "code": "rewrite" }
+    ]
+  },
+  "rename_column.sql": {
+    "statements": [{ "index": 0, "code": "safe" }]
+  },
+  "set_data_type_age.sql": {
+    "statements": [{ "index": 0, "code": "rewrite" }]
+  },
+  "set_not_null_bio.sql": {
+    "statements": [{ "index": 0, "code": "lock_risk" }]
+  },
+  "truncate_orders.sql": {
+    "statements": [{ "index": 0, "code": "data_loss" }]
+  },
+  "truncate_table_users.sql": {
+    "statements": [{ "index": 0, "code": "data_loss" }]
+  },
+  "unique_index_email.sql": {
+    "statements": [{ "index": 0, "code": "lock_risk" }]
+  }
+}

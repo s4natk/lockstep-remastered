@@ -1,0 +1,24 @@
+name: Review migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration_path:
+        description: SQL file relative to the repo root
+        required: true
+        default: eval/migrations/drop_table_sessions.sql
+      worker_url:
+        description: Worker origin
+        required: true
+        default: http://localhost:8787
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          migration_path: ${{ inputs.migration_path }}
+          worker_url: ${{ inputs.worker_url }}
+          github_token: ${{ github.token }}

@@ -1,0 +1,28 @@
+.mark {
+  flex: none;
+  display: block;
+}
+
+.base {
+  fill: var(--text-1);
+}
+
+.lock {
+  fill: var(--accent);
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.wordmark {
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  line-height: 1;
+  white-space: nowrap;
+}

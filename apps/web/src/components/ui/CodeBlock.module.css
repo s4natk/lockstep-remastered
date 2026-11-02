@@ -1,0 +1,65 @@
+.block {
+  margin: 0;
+  min-width: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 4px 0 10px;
+  border-bottom: 1px solid var(--line-subtle);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.caption {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pre {
+  margin: 0;
+  padding: 9px 0;
+  overflow: auto;
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.pre:focus-visible {
+  outline-offset: -2px;
+}
+
+.line {
+  display: flex;
+  min-width: max-content;
+  padding: 0 12px;
+}
+
+.number {
+  flex: none;
+  width: 2.2em;
+  margin-right: 12px;
+  color: var(--text-4);
+  text-align: right;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.text {
+  white-space: pre;
+}

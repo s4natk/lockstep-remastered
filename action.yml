@@ -1,0 +1,23 @@
+name: Lockstep migration review
+description: Post a SQL migration to a Lockstep Worker and comment on the pull request.
+inputs:
+  migration_path:
+    description: Path to the SQL file, relative to the repository root.
+    required: true
+  worker_url:
+    description: Worker origin, with no path suffix.
+    required: true
+  github_token:
+    description: Token used to comment on the pull request. Leave empty to print the parse result only.
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - name: Review migration
+      shell: bash
+      env:
+        MIGRATION_PATH: ${{ inputs.migration_path }}
+        WORKER_URL: ${{ inputs.worker_url }}
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: bash scripts/review-migration.sh

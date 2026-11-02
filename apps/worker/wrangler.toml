@@ -1,0 +1,24 @@
+name = "lockstep"
+main = "src/index.ts"
+compatibility_date = "2026-10-04"
+
+[vars]
+ALLOWED_ORIGINS = "https://lockstep-eta.vercel.app"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lockstep"
+database_id = "d4657519-bebd-4043-93db-8528961f3e3c"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "lockstep-runbooks"
+
+[durable_objects]
+bindings = [
+  { name = "SESSION", class_name = "ReviewSession" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ReviewSession"]

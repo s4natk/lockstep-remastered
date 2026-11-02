@@ -1,0 +1,96 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  align-content: start;
+  justify-content: center;
+  padding: 12vh 16px 16px;
+  background: var(--scrim);
+  animation: lockstep-fade-in var(--duration) var(--ease);
+}
+
+.panel {
+  width: min(560px, 100%);
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--overlay);
+  box-shadow: var(--shadow-pop);
+  animation: lockstep-rise var(--duration-slow) var(--ease-out);
+}
+
+.panel input {
+  display: block;
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  outline: none;
+  font-size: var(--text-lg);
+}
+
+.list {
+  max-height: min(420px, 56vh);
+  overflow: auto;
+  padding: 8px;
+}
+
+.list h3 {
+  padding: 8px 8px 4px;
+  color: var(--text-4);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+  font-size: var(--text-md);
+  text-align: left;
+}
+
+.item[aria-selected="true"] {
+  background: var(--selected);
+}
+
+.item :global(svg) {
+  color: var(--text-3);
+  flex: none;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  color: var(--text-4);
+  font-size: var(--text-xs);
+}
+
+.empty {
+  padding: 16px 8px;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 767px) {
+  .scrim {
+    padding: 8px;
+    align-content: start;
+  }
+}

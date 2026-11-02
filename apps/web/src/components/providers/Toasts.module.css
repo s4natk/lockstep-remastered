@@ -1,0 +1,80 @@
+.region {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--overlay);
+  color: var(--text-1);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--text-md);
+  pointer-events: auto;
+  animation: lockstep-rise var(--duration-slow) var(--ease-out);
+}
+
+.icon {
+  flex: none;
+}
+
+.toast[data-tone="success"] .icon {
+  color: var(--accent);
+}
+
+.toast[data-tone="danger"] .icon {
+  color: var(--danger);
+}
+
+.message {
+  flex: 1;
+  min-width: 0;
+}
+
+.action {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+.action:hover {
+  background: var(--accent-soft);
+}
+
+.close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  color: var(--text-3);
+}
+
+.close:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+@media (max-width: 767px) {
+  .region {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    align-items: stretch;
+  }
+}

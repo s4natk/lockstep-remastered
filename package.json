@@ -1,0 +1,15 @@
+{
+  "name": "lockstep",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:worker": "pnpm --filter @lockstep/worker dev",
+    "dev:web": "pnpm --filter @lockstep/web dev",
+    "test": "pnpm --filter @lockstep/worker test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "eval:retrieval": "pnpm --filter @lockstep/worker eval:retrieval"
+  }
+}

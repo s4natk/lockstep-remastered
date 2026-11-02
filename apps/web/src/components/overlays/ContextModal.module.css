@@ -1,0 +1,78 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lede {
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.lede code {
+  font-size: 0.92em;
+}
+
+.compose,
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.compose input,
+.compose textarea,
+.item textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-1);
+  outline: none;
+  resize: vertical;
+}
+
+.compose input:focus,
+.compose textarea:focus,
+.item textarea:focus {
+  border-color: var(--line-strong);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+}
+
+.item[data-enabled="false"] {
+  opacity: 0.55;
+}
+
+.itemTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.itemTop strong {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-md);
+}
+
+.id {
+  color: var(--text-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.empty {
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}

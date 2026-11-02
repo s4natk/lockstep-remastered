@@ -1,0 +1,1 @@
+ALTER TABLE users ALTER COLUMN age SET DATA TYPE integer
