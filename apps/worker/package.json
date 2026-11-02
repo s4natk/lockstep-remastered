@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "test": "node test/api.test.mjs && node test/session.test.mjs && node test/chatSession.test.mjs && node --experimental-strip-types --import ./test/register-ts.mjs test/sessionMessage.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/runbooks.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/hybrid.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/citationCheck.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/reviewGraph.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/openaiChat.test.ts",
+    "test": "node test/api.test.mjs && node test/session.test.mjs && node test/chatSession.test.mjs && node --experimental-strip-types --import ./test/register-ts.mjs test/sessionMessage.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/runbooks.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/hybrid.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/citationCheck.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/reviewGraph.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/openaiChat.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/normalization.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/investigation.test.ts && node test/investigationApi.test.mjs && node --experimental-strip-types --import ./test/register-ts.mjs test/embeddings.test.ts",
     "eval:retrieval": "node --experimental-strip-types --import ./test/register-ts.mjs scripts/evalRetrieval.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "eval:investigations": "node --experimental-strip-types --import ./test/register-ts.mjs scripts/evalInvestigations.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261003.1",

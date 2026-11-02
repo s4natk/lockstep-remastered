@@ -12,7 +12,10 @@ const worker = await unstable_dev("src/index.ts", {
 
 try {
   const sessionId = `sess-chat-${Date.now()}`;
-  const socket = new WebSocket(`ws://127.0.0.1:${worker.port}/agent/connect/${sessionId}`);
+  const socket = new WebSocket(`ws://127.0.0.1:${worker.port}/agent/connect/${sessionId}`, [
+    "lockstep",
+    `capability.${"chat_test_" + "a".repeat(32)}`,
+  ]);
   const messages = [];
   const done = new Promise((resolve, reject) => {
     socket.addEventListener("message", (event) => {
@@ -33,7 +36,10 @@ try {
   });
   socket.send(JSON.stringify({ type: "message", text: "hi" }));
   const result = await done;
-  assert.equal(messages.some((message) => message.type === "intent" && message.intent === "chat"), true);
+  assert.equal(
+    messages.some((message) => message.type === "intent" && message.intent === "chat"),
+    true,
+  );
   assert.equal(result.intent, "chat");
   assert.match(result.reply, /Lockstep/i);
   socket.close();

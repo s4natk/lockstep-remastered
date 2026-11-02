@@ -5,7 +5,8 @@ import { isRecord } from "./validation.js";
 
 export function parseApplicationLog(evidence: Evidence[]): ParsedFailureDetails {
   const result = emptyDetails();
-  for (const item of evidence) {
+  const document = evidence.find((item) => item.id === "input:document");
+  for (const item of document ? [document] : evidence) {
     const text = plainText(item.content);
     let message = text.trim();
     let level = text

@@ -36,7 +36,9 @@ for (const chunk of chunks) {
 }
 
 // The first question listed for each chunk is its canonical phrasing; the rest are paraphrases.
-const canonical = chunks.map((chunk) => questions.find((question) => question.chunkId === chunk.id)!);
+const canonical = chunks.map((chunk) =>
+  questions.find((question) => question.chunkId === chunk.id)!,
+);
 for (const question of canonical) {
   const [top] = searchRunbooks(chunks, question.query, 3);
   assert.ok(top, question.query);

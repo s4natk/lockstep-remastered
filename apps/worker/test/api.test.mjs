@@ -24,12 +24,12 @@ try {
   assert.equal(healthBody.ok, true);
   assert.equal(typeof healthBody.timestamp, "string");
   assert.equal(healthBody.openai.configured, false);
-  assert.equal(healthBody.openai.mode, "mock");
+  assert.equal(healthBody.openai.mode, "deterministic");
 
   const deployed = await worker.fetch("http://localhost/health", {
     headers: { Origin: "https://lockstep-eta.vercel.app" },
   });
-  assert.equal(deployed.headers.get("access-control-allow-origin"), "https://lockstep-eta.vercel.app");
+  assert.equal(deployed.headers.get("access-control-allow-origin"), null);
 
   const unknown = await worker.fetch("http://localhost/health", {
     headers: { Origin: "https://example.com" },

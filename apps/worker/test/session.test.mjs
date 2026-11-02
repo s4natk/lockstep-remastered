@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { unstable_dev } from "wrangler";
 
+const accessKey = "session_test_" + "a".repeat(32);
 const worker = await unstable_dev("src/index.ts", {
   config: "wrangler.toml",
   local: true,
@@ -11,7 +12,10 @@ const worker = await unstable_dev("src/index.ts", {
 });
 
 async function exchange(sessionId, payload) {
-  const socket = new WebSocket(`ws://127.0.0.1:${worker.port}/agent/connect/${sessionId}`);
+  const socket = new WebSocket(`ws://127.0.0.1:${worker.port}/agent/connect/${sessionId}`, [
+    "lockstep",
+    `capability.${accessKey}`,
+  ]);
   const messages = [];
   const finished = new Promise((resolve, reject) => {
     socket.addEventListener("message", (event) => {
@@ -37,7 +41,10 @@ async function exchange(sessionId, payload) {
 
 try {
   const sessionId = `sess-drop-${Date.now()}`;
-  const { messages, last: result } = await exchange(sessionId, { type: "review", sql: "DROP TABLE sessions" });
+  const { messages, last: result } = await exchange(sessionId, {
+    type: "review",
+    sql: "DROP TABLE sessions",
+  });
 
   assert.equal(result.type, "done");
   assert.equal(messages[0].type, "intent");
@@ -49,21 +56,33 @@ try {
   assert.match(result.note, /DROP TABLE deletes the table and its rows/);
   assert.equal(result.note.includes("Friday"), false);
 
-  const order = messages.map((message) => (message.type === "stage" ? `stage:${message.stage}` : message.type));
+  const order = messages.map((message) =>
+    message.type === "stage" ? `stage:${message.stage}` : message.type,
+  );
   const retrieveAt = order.indexOf("stage:retrieve");
   const draftAt = order.indexOf("stage:draft");
   assert.ok(order.indexOf("parse") < retrieveAt, order.join(","));
   assert.ok(retrieveAt < draftAt, order.join(","));
   assert.ok(draftAt < order.indexOf("token"), order.join(","));
 
-  const saved = await worker.fetch(`http://localhost/api/sessions/${sessionId}`);
+  const saved = await worker.fetch(`http://localhost/api/sessions/${sessionId}`, {
+    headers: { authorization: `Bearer ${accessKey}` },
+  });
   assert.equal(saved.status, 200);
   const session = await saved.json();
   assert.equal(session.id, sessionId);
+  const forbidden = await worker.fetch(`http://localhost/api/sessions/${sessionId}`, {
+    headers: { authorization: `Bearer ${"different_owner_" + "b".repeat(32)}` },
+  });
+  assert.equal(forbidden.status, 404);
+  assert.equal((await worker.fetch(`http://localhost/api/sessions/${sessionId}`)).status, 401);
   assert.match(session.note, /DROP TABLE deletes the table and its rows/);
   assert.match(session.parseJson, /data_loss/);
 
-  const invalid = await exchange(`sess-invalid-${Date.now()}`, { type: "review", sql: "ALTER TABLE" });
+  const invalid = await exchange(`sess-invalid-${Date.now()}`, {
+    type: "review",
+    sql: "ALTER TABLE",
+  });
   assert.equal(invalid.last.type, "error");
   assert.ok(invalid.last.error.length > 0);
   assert.notEqual(invalid.last.error, "The review failed.");

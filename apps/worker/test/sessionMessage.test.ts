@@ -7,7 +7,9 @@ import { readSessionMessage } from "../src/sessionMessage.ts";
 assert.equal(looksLikeMigration("DROP TABLE sessions;"), true);
 assert.equal(looksLikeMigration("hi there"), false);
 
-const fromText = readSessionMessage(JSON.stringify({ type: "message", text: "hello", context: [] }));
+const fromText = readSessionMessage(
+  JSON.stringify({ type: "message", text: "hello", context: [] }),
+);
 assert.ok(!("error" in fromText));
 if (!("error" in fromText)) {
   assert.equal(fromText.text, "hello");
@@ -33,7 +35,9 @@ assert.deepEqual(blankReview, { error: "sql is required" });
 const missing = readSessionMessage(JSON.stringify({ type: "message" }));
 assert.deepEqual(missing, { error: "message is required" });
 
-const badContext = readSessionMessage(JSON.stringify({ type: "review", sql: "DROP TABLE t", context: [1] }));
+const badContext = readSessionMessage(
+  JSON.stringify({ type: "review", sql: "DROP TABLE t", context: [1] }),
+);
 assert.deepEqual(badContext, { error: "context must be an array of strings" });
 
 assert.deepEqual(allowedOrigins(undefined), ["http://localhost:3000", "http://127.0.0.1:3000"]);
@@ -43,3 +47,11 @@ assert.deepEqual(allowedOrigins(" https://a.example/, ,https://b.example "), [
   "https://a.example",
   "https://b.example",
 ]);
+assert.ok("error" in readSessionMessage(JSON.stringify({ sql: "x".repeat(32769) })));
+assert.ok("error" in readSessionMessage("x".repeat(65537)));
+assert.ok(
+  "error" in
+    readSessionMessage(
+      JSON.stringify({ sql: "DROP TABLE t", context: Array.from({ length: 21 }, () => "context") }),
+    ),
+);

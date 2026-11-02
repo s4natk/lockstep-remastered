@@ -1,8 +1,10 @@
 import { plainText } from "./parsing.js";
+import { isRecord } from "./validation.js";
 import type { FailureKind } from "./investigation.js";
 
 export function detectFailureKind(input: string): FailureKind {
   const text = plainText(input);
+  if (isStructuredLog(text)) return "application_log";
   if (
     /\b(?:SQLSTATE|PostgreSQL|psycopg\d?|PG::\w+|SequelizeDatabaseError)\b|(?:ERROR|FATAL):\s*(?:relation|column|duplicate key|deadlock|syntax error|password authentication|permission denied for|connection|remaining connection|current transaction|canceling statement)|violates (?:foreign key|not-null|unique) constraint/i.test(
       text,
@@ -46,4 +48,26 @@ export function detectFailureKind(input: string): FailureKind {
     return "application_log";
   }
   return "unknown";
+}
+
+function isStructuredLog(text: string): boolean {
+  const hasLogEnvelope = (value: unknown): boolean =>
+    isRecord(value) &&
+    (typeof value.level === "string" ||
+      typeof value.severity === "string" ||
+      ((typeof value.timestamp === "string" || typeof value.time === "string") &&
+        (typeof value.message === "string" || typeof value.msg === "string")));
+  try {
+    if (hasLogEnvelope(JSON.parse(text))) return true;
+  } catch {
+    /* A log stream can contain one JSON object per line. */
+  }
+  return text.split(/\r\n|\n|\r/).some((line) => {
+    if (!line.trim().startsWith("{")) return false;
+    try {
+      return hasLogEnvelope(JSON.parse(line));
+    } catch {
+      return false;
+    }
+  });
 }

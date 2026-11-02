@@ -1,4 +1,4 @@
-﻿import type { Evidence, InvestigationInput, NormalizedFailureContext } from "./investigation.js";
+import type { Evidence, InvestigationInput, NormalizedFailureContext } from "./investigation.js";
 import { detectFailureKind } from "./classify.js";
 import { parseRuntimeFailure } from "./runtimeFailure.js";
 import { parseTestFailure } from "./testFailure.js";

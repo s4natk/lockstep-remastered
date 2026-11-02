@@ -1,4 +1,4 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   detectFailureKind,
@@ -393,4 +393,35 @@ test("wire validation never coerces malformed JSON objects into text", () => {
     isInvestigationReport({ ...report, trace: [{ stage: hostile, durationMs: 1 }] }),
     false,
   );
+});
+
+test("recognizes complete pretty JSON log documents without false malformed events", () => {
+  const rawInput = '{\n  "service": "api",\n  "level": "error",\n  "message": "pool exhausted"\n}';
+  const context = normalize(rawInput);
+  assert.equal(context.kind, "application_log");
+  assert.deepEqual(context.errorMessages, ["pool exhausted"]);
+  assert.equal(context.findings.length, 1);
+  assert.deepEqual(context.findings[0]?.evidenceIds, ["input:document"]);
+  assert.equal(
+    context.warnings.some((warning) => warning.code === "malformed_json"),
+    false,
+  );
+  assert.equal(
+    context.evidence.find((source) => source.id === "input:document")?.content,
+    rawInput,
+  );
+});
+
+test("keeps structured log envelopes distinct from network and HTTP responses", () => {
+  const rawInput =
+    '{"level":"info","message":"Starting job"}\n{"level":"warn","message":"Cache connection retry"}\n{"level":"error","message":"Connection timeout","code":"ETIMEDOUT"}';
+  const context = normalize(rawInput);
+  assert.equal(context.kind, "application_log");
+  assert.deepEqual(context.errorMessages, ["Cache connection retry", "Connection timeout"]);
+  assert.equal(
+    normalize('{"severity":"error","message":"HTTP 500 from upstream"}').kind,
+    "application_log",
+  );
+  assert.equal(normalize('{"status":500,"message":"HTTP 500 from upstream"}').kind, "http_error");
+  assert.equal(normalize("ETIMEDOUT upstream").kind, "http_error");
 });

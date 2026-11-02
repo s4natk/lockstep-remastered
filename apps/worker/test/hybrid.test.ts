@@ -36,7 +36,9 @@ assert.deepEqual(first, second);
 assert.equal(fetches, 0);
 
 // The first question listed for each chunk is its canonical phrasing; the rest are paraphrases.
-const canonical = chunks.map((chunk) => questions.find((question) => question.chunkId === chunk.id)!);
+const canonical = chunks.map((chunk) =>
+  questions.find((question) => question.chunkId === chunk.id)!,
+);
 for (const question of canonical) {
   const [top] = await hybridSearch({ chunks, query: question.query, embedder, limit: 3 });
   assert.ok(top, question.query);

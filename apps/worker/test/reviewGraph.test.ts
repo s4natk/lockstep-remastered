@@ -6,20 +6,20 @@ import { mockReviewModel, streamReview } from "../src/reviewGraph.ts";
 import { runbookChunks } from "../src/runbookChunks.ts";
 
 let prompt = "";
-let result: {
-  note: string;
-  dropped: string[];
-  citations: Array<{ kind: string; sourceId: string }>;
-  trace: { spans: Array<{ name: string }> };
-} | undefined;
+let result:
+  | {
+      note: string;
+      dropped: string[];
+      citations: Array<{ kind: string; sourceId: string }>;
+      trace: { spans: Array<{ name: string }> };
+    }
+  | undefined;
 const model = mockReviewModel();
 const tokens: string[] = [];
 const order: string[] = [];
 for await (const event of streamReview("DROP TABLE sessions", {
   parse: async () => ({
-    statements: [
-      { index: 0, sql: "DROP TABLE sessions", start: 0, end: 19 },
-    ],
+    statements: [{ index: 0, sql: "DROP TABLE sessions", start: 0, end: 19 }],
     hazards: [
       {
         code: "data_loss",
@@ -41,7 +41,10 @@ for await (const event of streamReview("DROP TABLE sessions", {
   model: {
     stream(input) {
       prompt = input.prompt;
-      return model.stream(input);
+      return (async function* () {
+        yield* model.stream(input);
+        yield " Ship this on Friday without a backup.";
+      })();
     },
   },
 })) {
@@ -64,11 +67,15 @@ assert.match(result.note, /DROP TABLE deletes the table and its rows/);
 assert.equal(result.note.includes("Friday"), false);
 assert.deepEqual(result.dropped, ["Ship this on Friday without a backup."]);
 assert.equal(
-  result.citations.some((citation) => citation.kind === "parser" && citation.sourceId === "statement:0"),
+  result.citations.some(
+    (citation) => citation.kind === "parser" && citation.sourceId === "statement:0",
+  ),
   true,
 );
 assert.equal(
-  result.citations.some((citation) => citation.kind === "runbook" && citation.sourceId === "drop-table"),
+  result.citations.some(
+    (citation) => citation.kind === "runbook" && citation.sourceId === "drop-table",
+  ),
   true,
 );
 for (const name of ["wasm.parse", "retrieval.hybrid", "retrieval.embed", "review.draft"]) {
@@ -87,9 +94,7 @@ for await (const event of streamReview(
   "DROP TABLE sessions",
   {
     parse: async () => ({
-      statements: [
-        { index: 0, sql: "DROP TABLE sessions", start: 0, end: 19 },
-      ],
+      statements: [{ index: 0, sql: "DROP TABLE sessions", start: 0, end: 19 }],
       hazards: [
         {
           code: "data_loss",
@@ -111,7 +116,10 @@ for await (const event of streamReview(
     model: {
       stream(input) {
         contextPrompt = input.prompt;
-        return model.stream(input);
+        return (async function* () {
+          yield* model.stream(input);
+          yield " Ship this on Friday without a backup.";
+        })();
       },
     },
   },
@@ -137,6 +145,8 @@ assert.equal(
   true,
 );
 assert.equal(
-  contextResult.citations.some((citation) => citation.kind === "parser" && citation.sourceId === "statement:0"),
+  contextResult.citations.some(
+    (citation) => citation.kind === "parser" && citation.sourceId === "statement:0",
+  ),
   true,
 );
