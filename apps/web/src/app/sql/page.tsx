@@ -1,17 +1,15 @@
-import type { Metadata } from "next";
-import { AppShell } from "../../components/AppShell";
-import Link from "next/link";
-export const metadata: Metadata = { title: "SQL migration review" };
-export default function SqlPage() {
+import { Suspense } from "react";
+import { SidekickApp } from "../../components/sidekick/SidekickApp";
+export default function Page() {
   return (
-    <>
-      <div className="sql-back-link">
-        <Link href="/investigate">← Investigation workspace</Link>
-        <span>Specialized PostgreSQL migration review</span>
-      </div>
-      <div className="sql-legacy-workspace">
-        <AppShell />
-      </div>
-    </>
+    <Suspense
+      fallback={
+        <div className="ls-loading-shell" role="status">
+          Opening your workspace…
+        </div>
+      }
+    >
+      <SidekickApp view="agent" initialKind="sql_migration" />
+    </Suspense>
   );
 }

@@ -6,45 +6,50 @@ import { readFileSync } from "node:fs";
 const git = (args, input) =>
   execFileSync("git", args, { encoding: "utf8", input, maxBuffer: 64 * 1024 * 1024 }).trim();
 const release = process.argv.includes("--release");
-const records = git(["log", "--reverse", "--format=%H%x00%s%x00%aI%x00%cI"])
+const records = git(["log", "--reverse", "--format=%H%x00%s%x00%aI%x00%cI%x00%T"])
   .split("\n")
   .map((line) => line.split("\0"));
-if (release && records.length !== 37)
-  throw new Error(`Expected 37 commits, found ${records.length}`);
+const initialReleaseCommits = 37;
+const sidekickReleaseCommits = 3;
+if (release && records.length !== initialReleaseCommits + sidekickReleaseCommits)
+  throw new Error(`Expected 40 commits (37 initial + 3 sidekick), found ${records.length}`);
 const verifyMetadata = release || process.argv.includes("--historical");
 let previous = -Infinity;
 const distribution = {};
-for (const [index, [hash, subject, author, committer]] of records.entries()) {
+const releaseTrees = new Set();
+for (const [index, [hash, subject, author, committer, tree]] of records.entries()) {
   if (!verifyMetadata) continue;
+  if (releaseTrees.has(tree))
+    throw new Error(`Repeated content tree at release commit ${index + 1}`);
+  releaseTrees.add(tree);
   if (
     !/^(feat|fix|refactor|test|docs|chore|style|perf|build|ci)(\([a-z-]+\))?: [a-z].{5,70}$/.test(
       subject,
     )
   )
     throw new Error(`Invalid subject at commit ${index + 1}`);
-  const expectedDay = index < 12 ? "2026-10-30" : index < 25 ? "2026-10-31" : "2026-11-01";
-  const expectedOffset = index < 25 ? "-04:00" : "-05:00";
   const timestamp = Date.parse(author);
-  const time = author.slice(11, 19);
+  if (author !== committer || timestamp <= previous)
+    throw new Error(`Invalid chronological metadata at commit ${index + 1}`);
+  const expectedDay = index < 20 ? "2026-11-01" : "2026-11-02";
   if (
-    author !== committer ||
     !author.startsWith(expectedDay) ||
-    !author.endsWith(expectedOffset) ||
-    time < "10:00:00" ||
-    time > "22:00:00" ||
-    timestamp <= previous
+    !author.endsWith("-05:00") ||
+    timestamp <= Date.parse("2026-11-01T22:12:14-05:00") ||
+    timestamp > Date.parse("2026-11-02T02:00:00-05:00")
   )
-    throw new Error(`Invalid historical metadata at commit ${index + 1}`);
+    throw new Error(`Invalid November release metadata at commit ${index + 1}`);
   previous = timestamp;
-  distribution[expectedDay] = (distribution[expectedDay] ?? 0) + 1;
+  const day = author.slice(0, 10);
+  distribution[day] = (distribution[day] ?? 0) + 1;
   if (!git(["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", hash]))
     throw new Error(`Empty commit ${index + 1}`);
 }
 
 const forbidden =
-  /(^|\/)(node_modules|\.next|dist|build|coverage|\.wrangler|\.turbo|\.cache|target|\.codex|\.agents|\.cursor|\.claude|\.windsurf|\.aider[^/]*|AGENTS\.md|CLAUDE\.md|copilot-instructions\.md)(\/|$)/;
+  /(^|\/)(node_modules|\.next|dist|build|coverage|\.wrangler|\.turbo|\.cache|target|\.codex|\.agents|\.cursor|\.claude|\.windsurf|\.aider[^/]*|\.openai|\.continue|\.roo|\.kilocode|\.opencode|\.gemini|\.goose|\.amazonq|\.qodo|\.clinerules|\.cursorrules|\.windsurfrules|AGENTS\.md|CLAUDE\.md|GEMINI\.md|SKILL\.md|copilot-instructions\.md|\.mcp(?:\.json)?|mcp\.json|\.vscode|\.idea|\.aws|\.ssh|\.azure|\.gcloud|\.vercel|\.netlify|\.direnv|\.pnpm-store)(\/|$)|(^|\/)\.github\/(instructions|prompts|agents)(\/|$)|(^|\/)\.config\/gcloud(\/|$)/i;
 const protectedFile =
-  /(^|\/)(\.env(?:\..*)?|\.dev\.vars(?:\..*)?)$|\.(pem|key|p12|pfx|log)$|(?:credentials|service-account)[^/]*\.json$/i;
+  /(^|\/)(\.env(?:\..*)?|\.dev\.vars(?:\..*)?|\.envrc|\.git-credentials|\.netrc|_netrc|id_rsa[^/]*|id_ed25519[^/]*)$|\.(pem|key|p12|pfx|keystore|log|sqlite3?|db)(?:-(?:journal|wal|shm))?$|(?:credentials|service-account)[^/]*\.json$/i;
 const listPaths = (args) => git(args).split("\0").filter(Boolean);
 const filenames = listPaths(["ls-files", "-z"]);
 const workingFiles = [
@@ -82,6 +87,15 @@ const batch = execFileSync("git", ["cat-file", "--batch"], {
 let offset = 0;
 const corpus = [];
 let textBlobs = 0;
+let binaryBlobs = 0;
+const historicalBinaryBuildPaths = [];
+const binaryText = (body) =>
+  [
+    ...(body.toString("latin1").match(/[\x20-\x7e]{4,}/g) ?? []),
+    ...(body.toString("utf16le").match(/[\x20-\x7e]{4,}/g) ?? []),
+  ].join("\n");
+const privateHomePath =
+  /(?:[A-Z]:[\\/](?:Users|Documents and Settings)[\\/][^\s/\\]+|\/(?:Users|home)\/(?!runner\b|builder\b)[^\s/]+)/i;
 while (offset < batch.length) {
   const newline = batch.indexOf(10, offset);
   const [hash, type, length] = batch.subarray(offset, newline).toString("utf8").split(" ");
@@ -89,18 +103,21 @@ while (offset < batch.length) {
   const size = Number(length);
   const body = batch.subarray(newline + 1, newline + 1 + size);
   offset = newline + 1 + size + 1;
-  if (body.includes(0)) continue;
-  const source = body.toString("utf8");
+  const binary = body.includes(0);
+  const source = binary ? binaryText(body) : body.toString("utf8");
   if (
     /sk-[A-Za-z0-9_-]{20,}|AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|https?:\/\/[^\s/:]+:[^\s/@]+@/.test(
       source,
     )
   )
     throw new Error(`Credential candidate in history blob ${hash}`);
-  if (/C:[\\/]Users[\\/][^\s/\\]+|\/Users\/[^\s/]+/.test(source))
-    throw new Error(`Personal filesystem path in history blob ${hash}`);
+  if (privateHomePath.test(source)) {
+    if (!binary) throw new Error(`Personal filesystem path in history blob ${hash}`);
+    historicalBinaryBuildPaths.push(hash);
+  }
   corpus.push(`\n--- Git blob ${hash} ---\n`, source);
-  textBlobs += 1;
+  if (binary) binaryBlobs += 1;
+  else textBlobs += 1;
 }
 for (const filename of workingFiles) {
   let body;
@@ -109,15 +126,14 @@ for (const filename of workingFiles) {
   } catch {
     continue;
   }
-  if (body.includes(0)) continue;
-  const source = body.toString("utf8");
+  const source = body.includes(0) ? binaryText(body) : body.toString("utf8");
   if (
     /sk-[A-Za-z0-9_-]{20,}|AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|https?:\/\/[^\s/:]+:[^\s/@]+@/.test(
       source,
     )
   )
     throw new Error(`Credential candidate in working file: ${filename}`);
-  if (/C:[\\/]Users[\\/][^\s/\\]+|\/Users\/[^\s/]+/.test(source))
+  if (privateHomePath.test(source))
     throw new Error(`Personal filesystem path in working file: ${filename}`);
   corpus.push(`\n--- Working file ${filename} ---\n`, source);
 }
@@ -141,6 +157,8 @@ console.log(
       distribution,
       trackedFiles: filenames.length,
       historyTextBlobs: textBlobs,
+      historyBinaryBlobs: binaryBlobs,
+      historicalBinaryBuildPaths: [...new Set(historicalBinaryBuildPaths)],
       secretlint: "passed",
       metadata: verifyMetadata ? "passed" : "not requested",
     },

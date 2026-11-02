@@ -1,17 +1,15 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Workspace } from "../../components/investigation/Workspace";
-export const metadata: Metadata = { title: "Investigate a failure" };
-export default function InvestigatePage() {
+import { SidekickApp } from "../../components/sidekick/SidekickApp";
+export default function Page() {
   return (
     <Suspense
       fallback={
-        <div className="workspace-loading" role="status">
-          Opening investigation workspace…
+        <div className="ls-loading-shell" role="status">
+          Opening your workspace…
         </div>
       }
     >
-      <Workspace />
+      <SidekickApp view="agent" />
     </Suspense>
   );
 }

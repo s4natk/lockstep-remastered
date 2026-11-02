@@ -1,23 +1,13 @@
 import type { MetadataRoute } from "next";
-
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Lockstep",
     short_name: "Lockstep",
-    description: "AI debugging and incident investigation",
+    description: "An evidence-grounded debugging workspace",
     start_url: "/",
     display: "standalone",
-    background_color: "#08090b",
-    theme_color: "#0C0E11",
-    icons: [
-      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-      {
-        src: "/icons/icon-maskable-512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "maskable",
-      },
-    ],
+    background_color: "#faf9f6",
+    theme_color: "#121b2e",
+    icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }],
   };
 }

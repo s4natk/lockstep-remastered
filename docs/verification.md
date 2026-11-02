@@ -1,126 +1,144 @@
-# Release verification
+# Sidekick refactor verification
 
-These results were obtained locally during the remastered implementation. They do
-not assert that a remote deployment or live provider integration has been tested.
+These checks were executed locally on November 2, 2026. They do not establish that
+a live provider or cloud deployment works with the owner's accounts.
 
-## Baseline
+## Current implementation
 
-The original repository was inspected read-only at commit
-`07d578de72cdd7e0c806a134229d45ac9d71056a`. Its working tree was clean before copying
-and remained clean afterward. The new repository was initialized independently;
-old Git metadata, dependencies, credentials, caches, and builds were excluded.
-
-Baseline locked install, all workspace type checks, existing worker regression tests,
-production frontend build, and 13 Rust tests passed. The existing frontend test command
-ran zero tests. The original repository did not provide lint or formatter checks.
-The retained retrieval evaluation measured recall@3 94/100 with the local hash embedder.
-
-New linting identified two inherited unused assignments, and rustfmt identified
-inherited formatting deviations. These were corrected. Dependency audits identified
-inherited production and development advisories; patched versions are locked and the
-complete final audit reports zero findings. PowerShell script-policy restrictions
-were handled by invoking `pnpm.cmd`, without changing machine execution policy.
+The report-oriented frontend was replaced with an original conversation workspace.
+All failure categories now use an actual LangGraph StateGraph and LangChain retrieval
+and prompt components. The Rust/WASM SQL analyzer remains a conditional specialist.
+Threads, messages, uploaded/pasted context, context selection, and legacy report
+migration use owner-scoped D1 persistence. Model answer text streams provisionally;
+only the validated final answer and report become authoritative saved output.
 
 ## Executed checks
 
-Commands below use `pnpm` for portability; the Windows execution used `pnpm.cmd`.
+Commands use `pnpm` for portability; Windows execution used `pnpm.cmd` without changing
+PowerShell's execution policy.
 
-| Command or check                                                                                     | Actual result                                                           |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `pnpm install --frozen-lockfile`                                                                     | Passed with the final lockfile                                          |
-| `pnpm peers check`                                                                                   | No peer dependency issues                                               |
-| `pnpm lint`                                                                                          | Passed                                                                  |
-| `pnpm format:check`                                                                                  | Passed                                                                  |
-| `pnpm typecheck`                                                                                     | All three package checks passed                                         |
-| `pnpm test`                                                                                          | Complete final worker and frontend suites passed                        |
-| `pnpm build`                                                                                         | Next.js production build passed for all application routes              |
-| `pnpm test:e2e`                                                                                      | 17 Chromium workflows passed; final run 46.9 seconds                    |
-| `cargo fmt --all --check --manifest-path packages/sql_guard/Cargo.toml`                              | Passed after formatting                                                 |
-| `cargo test --locked --manifest-path packages/sql_guard/Cargo.toml`                                  | 13 tests passed, including 25 SQL fixtures                              |
-| `cargo check --locked --target wasm32-unknown-unknown --manifest-path packages/sql_guard/Cargo.toml` | Passed                                                                  |
-| `wasm-pack build packages/sql_guard --target web --release --out-dir ../../.git/wasm-check`          | Passed                                                                  |
-| `pnpm eval:retrieval`                                                                                | Local-hash recall@3 94/100, unchanged from measured baseline            |
-| `pnpm eval:investigations`                                                                           | All 20 labeled case expectations passed                                 |
-| `pnpm audit --audit-level moderate --json`                                                           | Zero production or development advisories                               |
-| `node scripts/audit-repository.mjs --historical`                                                     | Secretlint and all historical metadata checks passed before publication |
-| `pnpm --filter @lockstep/worker exec wrangler deploy --dry-run --outdir .wrangler/dry-run`           | Passed; no deployment performed                                         |
+| Check                                            | Result                                                                                                         |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `pnpm install --frozen-lockfile`                 | Passed after removing unused SQL-editor dependencies                                                           |
+| `pnpm format:check`                              | Passed with the final formatted sources                                                                        |
+| `pnpm build`                                     | Next.js production build passed for all app routes                                                             |
+| Worker `wrangler deploy --dry-run`               | Backend bundle passed; no remote deployment                                                                    |
+| `pnpm release:audit`                             | Secret scan and 37 initial plus three sidekick commit metadata checks passed                                   |
+| `pnpm lint`                                      | Passed across the complete application and tests                                                               |
+| `pnpm typecheck`                                 | All three workspace package checks passed                                                                      |
+| `pnpm test`                                      | Complete retained worker suite, new graph/knowledge/thread/provider API suites, and nine frontend tests passed |
+| `pnpm test:e2e`                                  | 21 Chromium workflows passed in 58.1 seconds after the final cancellation and CSS namespace changes            |
+| `pnpm eval:investigations`                       | All 20 labeled case expectations passed                                                                        |
+| `pnpm eval:retrieval` with an empty provider key | Local-hash recall@3 94/100, unchanged                                                                          |
+| `pnpm security:scan`                             | Reachable history, staged blobs, current source, and historical paths passed Secretlint and repository rules   |
+| `pnpm audit --audit-level moderate --json`       | Zero advisories; 323 dependency entries                                                                        |
 
-The rebuilt web-target WASM binary was SHA-256 identical to the preserved checked-in
-binary. The worker parse API also passed all 25 labeled SQL fixtures against that
-actual binary, rather than a parser mock.
+The complete application suite was rerun after the sanitized WASM rebuild, along with
+all 13 Rust tests. The actual rebuilt WASM passed all 25 API fixture checks.
 
-A production `next start` process was launched on localhost port 3100. `/`,
-`/investigate`, `/history`, `/how-it-works`, and `/sql` all returned HTTP 200. The process
-was stopped after the smoke test.
+The normal worker test command now includes the universal graph assertion suite,
+six SQLite-backed knowledge tests, eight SQLite-backed thread repository tests,
+and real Wrangler knowledge, thread, and controlled-provider API tests. Shared
+normalization/wire-validation tests count 33. The retained parse API also passes
+all 25 SQL migration fixtures against the actual checked-in WASM binary.
 
-## Behavior and browser review
+A controlled local HTTP server validates real structured-output SSE, escaped Unicode,
+custom model and base URL, inherited environment on follow-ups, invalid-citation
+fallback, and turn-specific cancellation. This runs through the actual Wrangler
+thread endpoint. It performs no external provider calls. The vector-export regression
+also verifies the configured embedding endpoint/model and overwrite protection.
 
-The final test suite includes 29 counted normalization and wire-validation tests and
-nine frontend transport/component tests, in addition to the retained and new worker
-assertion suites. Real local Wrangler integration exercises D1, Durable Objects,
-WebSockets, history, deletion, authorization, SQL parsing, and rate limits. Controlled
-provider responses exercise refusals, bad JSON, unsupported citations, trusted-identity
-overrides, response limits, unavailable retrieval, cancellation, and provider failures.
+A production frontend was smoke-tested locally at `http://localhost:3000`, backed by
+Wrangler on port 8787. `/`, `/investigate`, `/history`, `/how-it-works`, and `/sql`
+all returned HTTP 200. A production-browser smoke test also completed a real
+investigation and same-thread follow-up with two final reports and no client errors. Health confirmed no model key is configured, so this preview
+uses deterministic guidance until the owner adds a server-side key.
 
-All four integration-test Worker startups explicitly override the provider key to
-empty. A temporary dummy-secret fixture proves both API overrides and CLI blank vars
-win over `.dev.vars`. Playwright also starts its own Worker with an empty provider
-key, rather than reusing a potentially credentialed backend.
+## Browser and behavior review
 
-The 17 browser tests cover Python, JavaScript, Java, Rust, test failures, HTTP errors,
-application logs, PostgreSQL errors, and SQL migrations. They also cover history across
-reloads, independent browser ownership, deletion, empty/oversized/environment input,
-network failures, unavailable sessions, malformed streams, slow-response cancellation,
-and the retained authenticated SQL WebSocket review.
+The browser suite covers Python, JavaScript, Java, Rust, tests, HTTP, logs,
+PostgreSQL/SQLite errors, and SQL migrations in the same agent. Real follow-ups retain
+the thread across reloads. Private context is pasted/uploaded, pinned/unpinned,
+retrieved with a unique marker, reopened, isolated from other owners, and deleted.
+History opens actual saved conversations and deletion removes the correct thread.
 
-Desktop (1440 pixels), mobile (390 pixels), and tablet (768 pixels) layouts were checked.
-Actual landing, intake, report, history, and SQL screenshots were reviewed. Tests check
-horizontal overflow, keyboard skip navigation, visible focus, accessible form labels,
-and computed contrast of at least 4.5:1 for key body text, action text, input labels,
-and editor text. This is targeted accessibility testing, not a full certification.
+Failure cases include malformed streams, network errors, cancellation without
+resubmission, authoritative final replacement of a provisional draft, oversized
+messages, invalid environment fields, and navigation away during an active request.
+The last regression prevents an old request's abort handler from replacing the newly
+selected thread. Server tests reject cancellation for a different active turn and
+prevent a completed request replay from claiming a new turn.
 
-Browser testing found and resolved a shared-module bundling failure that type checking
-alone did not detect. It also exposed a cancellation button being reused as a submit
-button, causing an unintended new request. The final regression confirms exactly one
-request and a stable cancelled state with editable input.
+Desktop (1440px), mobile (390px), and tablet (768px) layouts were checked. Actual
+workspace, conversation, history, context, and SQL-mode screenshots were reviewed.
+Checks include horizontal overflow, keyboard navigation, visible focus, accessible
+form labels, and computed 4.5:1 contrast for key text and controls. This is targeted
+accessibility testing, not a full audit.
 
-Review additionally corrected nullable history modes, malformed JSON report guards,
-Unicode SQL offsets, maximum-length SQL evidence, structured-log classification,
-private SSE cache headers, and untrusted model identity overrides. No discovered
-product regression remains knowingly unresolved.
+Final review additionally found and fixed stale context pins across threads: reopening
+a conversation now removes deleted or unavailable pins without losing valid ones. An
+eighth SQLite regression verifies both affected threads and persisted cleanup; the real
+API check sends the repaired IDs exactly as the frontend does. Cancellation captures
+its request controller before releasing the database turn, so a successor cannot be
+aborted by the earlier stop. The controlled-provider test confirms a subsequent turn
+completes successfully.
 
-## Evaluation
+Private vector tests reject foreign-owner and deleted matches by resolving them back
+to owned D1 chunks. SQLite tests exercise atomic quotas, transaction rollback,
+idempotency, expired turn leases, cancellation/late completion, and legacy migration.
+Most API tests explicitly disable model credentials; the controlled-provider test
+uses only its local dummy key and local endpoint. The credential-isolation fixture
+checks that explicit blank test variables override an ignored `.dev.vars` file.
 
-The final 20-case run measured parsing/validation 20/20, relevant runbook recall 17/17,
-citation identifiers 198/198, diagnostic lexical expectations 18/18, guidance
-expectations 18/18, and reliability expectations 20/20.
+## Evaluation measurements
 
-Across 18 local deterministic workflow samples, p50 was 0.261 ms and p95 was 9.929 ms.
-These measurements exclude provider, network, persistence, production scheduling,
-and SQL/WASM execution. They do not measure live AI usefulness. See the evaluation
-README for methodology and limitations.
+The current deterministic graph run passed parsing/validation 20/20, labeled runbook
+recall 17/17, citation identifiers 198/198, diagnostic lexical expectations 18/18,
+guidance expectations 18/18, and reliability expectations 20/20.
 
-## History and security
+Across 18 local workflow samples, p50 was 3.784 ms and p95 was 29.201 ms. These small
+process-local measurements include graph orchestration but exclude providers,
+embeddings, network, D1, production scheduling, and SQL/WASM execution. They are
+regression measurements, not production latency or a live AI quality score. Citation
+identity is not proof of entailment. See [evaluation](../eval/README.md).
 
-The initial release uses 37 substantive Conventional Commits. The requested historical
-metadata is assigned across October 30 (12), October 31 (13), and November 1 (12), 2026.
-Both date fields use Toronto's UTC-04:00 offset on the first two dates and UTC-05:00 on
-November 1. Assigned metadata is not a measurement of elapsed development time.
-`pnpm release:audit` validates the complete initial history, unique chronological
-timestamps, local 10:00–22:00 windows, nonempty commits, and subject format.
+## Preserved initial release
 
-Secretlint and repository rules inspect every reachable history text blob, historical
-filenames, staged blobs, and current source files. Environment files, credentials,
-private keys, dependencies, generated output, and unnecessary assistant artifacts are
-ignored or rejected. Only empty/placeholder environment templates are included.
-Scanning did not identify exposed credentials; pattern scans cannot prove absence of
-every possible secret.
+The original repository was inspected read-only at commit
+`07d578de72cdd7e0c806a134229d45ac9d71056a`. Its clean working tree was preserved. The
+remastered repository was independently initialized, excluding old Git metadata,
+credentials, dependencies, caches, and builds.
 
-## External limitations
+The published history contains 40 substantive Conventional Commits in their original
+implementation order, with 20 assigned to November 1 and 20 to November 2, 2026.
+Every timestamp is later than the GitHub repository's creation at November 1,
+22:12:14 Toronto time (UTC-05:00), and no later than November 2, 02:00. These are
+assigned release timestamps, not a measurement of development duration.
 
-No live OpenAI generation, live embedding call, Vectorize query/upsert, cloud D1
-provisioning, deployed Durable Object, or production frontend deployment was performed.
-Model/provider behavior is validated through controlled responses and explicit offline
-fallback. Remote GitHub Actions results are not asserted here; local equivalent checks
-passed. Capability-based history is browser-specific and has no account/SSO workflow.
-Interrupted generation is retried as a new investigation rather than resumed in place.
+History cleanup preserves all application files, author identities, messages, and
+implementation changes. Date-dependent audit rules and these notes follow the
+corrected schedule. The 40 release commits have distinct file trees and nonempty
+changes; no duplicate implementation commits were found. Rewritten commit IDs can
+remain credited in GitHub's profile contribution cache even when they are absent
+from the current branch. A profile-data rebuild is controlled by GitHub, not Git.
+
+The initial release additionally passed 13 Rust tests, rustfmt, wasm32 checking,
+a release WASM rebuild, and all 25 WASM API fixture checks. Its rebuilt binary was
+SHA-256 identical to the preserved checked-in binary:
+`3BE19B6DF3AA7F85BE0C6690A5629C40F044B481B4524F080A05AE345F294CBE`.
+Rust analyzer source is unchanged. The sidekick release rebuilds the WASM and matching
+web bindings with stripped symbols and remapped build paths, using `pnpm build:sql`.
+The old binary included eight personal build-path strings. The current binary has
+none. Its SHA-256 is `DCC921A3CECB7F8A9C6F550815A394248E59804799115341BD93D67F894819E9`. The already-published historical artifact still contains those noncredential
+paths; append-only commits do not erase older Git objects. The scanner checks binary
+ASCII/UTF-16 strings for credentials and reports historical binary build paths
+separately. No API key was found in those strings.
+
+## External limits
+
+No paid OpenAI generation, live embedding request, Vectorize query/upsert, remote D1
+provisioning, deployed Durable Object, or public frontend deployment was performed.
+Provider configuration is not proof of live credentials, billing, or endpoint
+compatibility. Remote GitHub Actions results are not asserted. The browser capability
+has no account/SSO or cross-device sync, and partial generation is not resumable from
+a LangGraph checkpoint. Context ingestion supports UTF-8 text/code, not PDFs/images.

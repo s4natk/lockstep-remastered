@@ -1,6 +1,15 @@
-import type { Metadata } from "next";
-import { HowItWorks } from "../../components/investigation/HowItWorks";
-export const metadata: Metadata = { title: "How it works" };
-export default function HowItWorksPage() {
-  return <HowItWorks />;
+import { Suspense } from "react";
+import { SidekickApp } from "../../components/sidekick/SidekickApp";
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <div className="ls-loading-shell" role="status">
+          Opening your workspace…
+        </div>
+      }
+    >
+      <SidekickApp view="help" />
+    </Suspense>
+  );
 }

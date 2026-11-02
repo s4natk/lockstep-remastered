@@ -1,18 +1,14 @@
-import { expect, test, type Page, type Locator } from "@playwright/test";
-
-async function assertNoHorizontalOverflow(page: Page) {
-  const dimensions = await page
-    .locator(".investigation-app")
-    .evaluate((element) => ({ scroll: element.scrollWidth, width: element.clientWidth }));
-  expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.width + 1);
+import { test, expect, type Page, type Locator } from "@playwright/test";
+import { fixtureReport } from "../apps/web/test/fixtures";
+import { FAILURE_EXAMPLES } from "../apps/web/src/lib/investigationExamples";
+async function noOverflow(page: Page) {
+  expect(
+    await page.locator(".ls-app").evaluate((element) => element.scrollWidth - element.clientWidth),
+  ).toBeLessThanOrEqual(1);
 }
-
-async function assertTextContrast(locator: Locator) {
-  const ratio = await locator.evaluate((element) => {
-    const rgba = (value: string) => {
-      const parts = value.match(/[\d.]+/g)?.map(Number) ?? [];
-      return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0, parts[3] ?? 1];
-    };
+async function contrast(locator: Locator) {
+  const value = await locator.evaluate((element) => {
+    const rgba = (source: string) => source.match(/[\d.]+/g)!.map(Number);
     const ancestors: Element[] = [];
     let node: Element | null = element;
     while (node) {
@@ -20,68 +16,63 @@ async function assertTextContrast(locator: Locator) {
       node = node.parentElement;
     }
     let background = [255, 255, 255];
-    for (const ancestor of ancestors) {
-      const color = rgba(getComputedStyle(ancestor).backgroundColor);
+    for (const item of ancestors) {
+      const color = rgba(getComputedStyle(item).backgroundColor);
+      const alpha = color[3] ?? 1;
       background = background.map(
-        (channel, index) => color[index]! * color[3]! + channel * (1 - color[3]!),
+        (channel, index) => color[index]! * alpha + channel * (1 - alpha),
       );
     }
-    const foreground = rgba(getComputedStyle(element).color);
-    const luminance = (color: number[]) =>
+    const light = (color: number[]) =>
       color
         .slice(0, 3)
         .map((channel) => {
-          const value = channel / 255;
-          return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+          const v = channel / 255;
+          return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
         })
-        .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index]!, 0);
-    const a = luminance(foreground);
-    const b = luminance(background);
+        .reduce((sum, v, index) => sum + v * [0.2126, 0.7152, 0.0722][index]!, 0);
+    const a = light(rgba(getComputedStyle(element).color)),
+      b = light(background);
     return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
   });
-  expect(ratio).toBeGreaterThanOrEqual(4.5);
+  expect(value).toBeGreaterThanOrEqual(4.5);
 }
-
-async function runExample(page: Page, id: string) {
-  await page.goto(`/investigate?example=${id}`);
-  await expect(page.getByLabel("Error, stack trace, logs, or SQL")).not.toBeEmpty();
-  await page.getByRole("button", { name: "Investigate failure" }).click();
-  await expect(
-    page.getByRole("heading", { name: "A clearer picture of the failure." }),
-  ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Observed evidence" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Verify the fix" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Evidence inspector/ })).toBeVisible();
-  await expect(page.locator(".notice-neutral strong")).toHaveText("Deterministic analysis");
+async function send(page: Page, message: string, count = 1) {
+  await page.getByRole("textbox", { name: "Message Lockstep" }).fill(message);
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.locator(".ls-assistant-turn")).toHaveCount(count);
+  await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
+  await expect(page.locator(".ls-assistant-turn").last().locator(".ls-answer-tools")).toBeVisible();
 }
-
-test("landing, navigation, keyboard focus, desktop and mobile layout", async ({ page }, info) => {
+async function investigate(page: Page, id = "python") {
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Every error has a story. Find yours." }),
-  ).toBeVisible();
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
-  await page.keyboard.press("Tab");
-  await page.screenshot({ path: info.outputPath("landing-desktop.png"), fullPage: true });
-  await assertNoHorizontalOverflow(page);
-  await assertTextContrast(page.locator(".hero-description"));
-  await assertTextContrast(page.getByRole("link", { name: "Start an investigation" }));
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("link", { name: "Start an investigation" })).toBeVisible();
-  await assertNoHorizontalOverflow(page);
-  await page.screenshot({ path: info.outputPath("landing-mobile.png"), fullPage: true });
-  await page.getByRole("link", { name: "Start an investigation" }).click();
-  await expect(page.getByRole("heading", { name: "What went wrong?" })).toBeVisible();
-  await assertTextContrast(page.locator('label[for="failure-input"]'));
-  await assertTextContrast(page.locator("#failure-input"));
-  await page.screenshot({ path: info.outputPath("intake-mobile.png"), fullPage: true });
-  await assertNoHorizontalOverflow(page);
-  await page.setViewportSize({ width: 768, height: 1024 });
-  await assertNoHorizontalOverflow(page);
-  await page.screenshot({ path: info.outputPath("intake-tablet.png"), fullPage: true });
-});
+  await send(page, FAILURE_EXAMPLES.find((example) => example.id === id)!.input);
+}
 
+test("original workspace, keyboard focus, mobile and tablet layouts", async ({ page }, info) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "What are we investigating?" })).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to workspace" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await contrast(page.locator(".ls-welcome>p"));
+  await contrast(page.locator(".ls-new-thread"));
+  await page.screenshot({ path: info.outputPath("agent-desktop.png"), fullPage: true });
+  await noOverflow(page);
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await noOverflow(page);
+  await page.screenshot({ path: info.outputPath("agent-tablet.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noOverflow(page);
+  await page.screenshot({ path: info.outputPath("agent-mobile.png"), fullPage: true });
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await expect(page.getByRole("dialog", { name: "Workspace" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Trace an exception", exact: false }).click();
+  await expect(page.getByRole("textbox", { name: "Message Lockstep" })).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "Message Lockstep" })).toContainText("Traceback");
+});
 for (const id of [
   "python",
   "javascript",
@@ -93,153 +84,342 @@ for (const id of [
   "database",
   "sql",
 ]) {
-  test(`real ${id} investigation completes without provider credentials`, async ({
-    page,
-  }, info) => {
-    await runExample(page, id);
-    const citation = page.locator(".evidence-references button").first();
-    await citation.click();
-    await expect(page.locator(".evidence-content")).toBeFocused();
+  test(`real ${id} investigation uses evidence-backed agent response`, async ({ page }, info) => {
+    await investigate(page, id);
+    await expect(page.locator(".ls-assistant-turn").last()).toContainText("Deterministic guidance");
+    await expect(page.locator(".ls-assistant-turn").last()).toContainText(
+      "AI diagnosis was unavailable",
+    );
+    await page
+      .locator(".ls-answer-tools")
+      .last()
+      .getByRole("button", { name: /Inspect \d+ sources/ })
+      .click();
+    await expect(page.getByRole("dialog", { name: "Investigation details" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Selected evidence" })).toBeVisible();
+    if (id === "logs")
+      await expect(page.getByRole("region", { name: "Log event timeline" })).toBeVisible();
+    await page.getByRole("tab", { name: "Report", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Verification", exact: true })).toBeVisible();
     if (id === "python") {
       await page.screenshot({ path: info.outputPath("report-desktop.png"), fullPage: true });
       await page.setViewportSize({ width: 390, height: 844 });
-      await assertNoHorizontalOverflow(page);
+      await noOverflow(page);
       await page.screenshot({ path: info.outputPath("report-mobile.png"), fullPage: true });
     }
-    await assertNoHorizontalOverflow(page);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await noOverflow(page);
   });
 }
 
-test("history persists across reload, keeps owners separate, and deletes saved reports", async ({
+test("conversation follow-ups keep the same thread and persist across reload", async ({
+  page,
+}, info) => {
+  await investigate(page);
+  const url = page.url();
+  await page.getByRole("button", { name: "How can I verify the fix?", exact: false }).click();
+  await send(page, "How can I verify the fix?", 2);
+  expect(page.url()).toBe(url);
+  await expect(page.locator(".ls-user-turn")).toHaveCount(2);
+  await page.reload();
+  await expect(page.locator(".ls-assistant-turn")).toHaveCount(2);
+  await expect(page.locator(".ls-user-turn").first()).toContainText("postal_code");
+  await page.screenshot({ path: info.outputPath("conversation-desktop.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noOverflow(page);
+  await page.screenshot({ path: info.outputPath("conversation-mobile.png"), fullPage: true });
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await page
+    .getByRole("dialog", { name: "Workspace" })
+    .getByRole("link", { name: /All investigations/ })
+    .click();
+  await expect(page.locator(".ls-history-list article")).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath("history-mobile.png"), fullPage: true });
+});
+
+test("private knowledge is saved, pinned, retrieved, isolated, and deleted", async ({
   page,
   browser,
 }, info) => {
-  await runExample(page, "python");
-  await page.getByRole("link", { name: "History", exact: true }).click();
-  await expect(page.locator(".history-item")).toHaveCount(1);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Context", exact: false }).first().click();
+  await page.getByRole("button", { name: "Paste context", exact: true }).click();
+  await page.getByRole("textbox", { name: "Title", exact: true }).fill("Shipping service runbook");
+  await page
+    .getByRole("textbox", { name: "Content", exact: true })
+    .fill(
+      "SHIPPING_RUNBOOK_MARKER: The order service expects address.postal_code. Validate the address payload before building a shipment. Missing postal codes should produce a validation response. Reproduce the missing-key request and add a regression test.",
+    );
+  await page.getByRole("button", { name: "Save context", exact: true }).click();
+  await expect(page.getByRole("checkbox", { name: "Pin Shipping service runbook" })).toBeChecked();
+  await page.screenshot({ path: info.outputPath("knowledge-desktop.png"), fullPage: true });
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await send(page, FAILURE_EXAMPLES[0]!.input);
+  await page
+    .locator(".ls-answer-tools")
+    .getByRole("button", { name: /Inspect \d+ sources/ })
+    .click();
+  await page
+    .locator(".ls-sources button")
+    .filter({ hasText: "Shipping service runbook" })
+    .first()
+    .click();
+  await expect(page.getByRole("region", { name: "Selected evidence" })).toContainText(
+    "SHIPPING_RUNBOOK_MARKER",
+  );
+  await page.keyboard.press("Escape");
   await page.reload();
-  await expect(page.locator(".history-item")).toHaveCount(1);
+  await expect(page.locator(".ls-assistant-turn")).toHaveCount(1);
+  await page.getByRole("button", { name: "Context", exact: false }).first().click();
+  await expect(page.getByRole("checkbox", { name: "Pin Shipping service runbook" })).toBeChecked();
+  await page.getByRole("checkbox", { name: "Pin Shipping service runbook" }).uncheck();
+  await page.keyboard.press("Escape");
+  await page.reload();
+  await page.getByRole("button", { name: "Context", exact: false }).first().click();
+  await expect(
+    page.getByRole("checkbox", { name: "Pin Shipping service runbook" }),
+  ).not.toBeChecked();
+  const other = await browser.newContext();
+  const otherPage = await other.newPage();
+  await otherPage.goto("http://localhost:3000");
+  await otherPage.getByRole("button", { name: "Context", exact: false }).first().click();
+  await expect(otherPage.locator(".ls-library-item")).toHaveCount(0);
+  await other.close();
+  await page.getByRole("button", { name: "Delete Shipping service runbook", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(page.locator(".ls-library-item")).toHaveCount(0);
+  await page.reload();
+  await page.getByRole("button", { name: "Context", exact: false }).first().click();
+  await expect(page.locator(".ls-library-item")).toHaveCount(0);
+});
+
+test("text and code file upload is real and rejects unsupported binary files", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add context", exact: true }).click();
+  await page.getByLabel("Upload context file").setInputFiles({
+    name: "profile.ts",
+    mimeType: "text/plain",
+    buffer: Buffer.from("export function getProfile(user) { return user?.email ?? null; }"),
+  });
+  await expect(page.getByRole("checkbox", { name: "Pin profile.ts" })).toBeChecked();
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(page.locator(".ls-context-preview")).toContainText("export function getProfile");
+  await page.getByLabel("Upload context file").setInputFiles({
+    name: "binary.p12",
+    mimeType: "application/octet-stream",
+    buffer: Buffer.from([0, 255, 0]),
+  });
+  await expect(page.locator(".ls-alert[role=alert]")).toContainText("not supported");
+});
+
+test("history opens the actual thread, isolates owners and deletes without fake entries", async ({
+  page,
+  browser,
+}, info) => {
+  await investigate(page, "javascript");
+  await page.getByRole("link", { name: /All investigations/ }).click();
+  await expect(page.locator(".ls-history-list article")).toHaveCount(1);
   await page.screenshot({ path: info.outputPath("history-desktop.png"), fullPage: true });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await assertNoHorizontalOverflow(page);
-  await page.screenshot({ path: info.outputPath("history-mobile.png"), fullPage: true });
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.locator(".ls-history-list article>a").click();
+  await expect(page.locator(".ls-assistant-turn")).toHaveCount(1);
   const other = await browser.newContext();
   const otherPage = await other.newPage();
   await otherPage.goto("http://localhost:3000/history");
-  await expect(
-    otherPage.getByRole("heading", { name: "Your first investigation starts here." }),
-  ).toBeVisible();
+  await expect(otherPage.getByRole("heading", { name: "A fresh page, for now." })).toBeVisible();
   await other.close();
-  await page.locator(".history-item-link").click();
-  await expect(
-    page.getByRole("heading", { name: "A clearer picture of the failure." }),
-  ).toBeVisible();
-  await page.getByRole("link", { name: "History", exact: true }).click();
+  await page.getByRole("link", { name: /All investigations/ }).click();
   await page.getByRole("button", { name: /Delete investigation/ }).click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "Your first investigation starts here." }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A fresh page, for now." })).toBeVisible();
 });
 
-test("empty, oversized, and malformed environment inputs give actionable validation", async ({
-  page,
-}) => {
-  await page.goto("/investigate");
-  await page.getByRole("button", { name: "Investigate failure" }).click();
-  await expect(page.locator(".notice[role=alert]")).toContainText("Paste an error");
-  await page.getByLabel("Error, stack trace, logs, or SQL").fill("x".repeat(32769));
-  await page.getByRole("button", { name: "Investigate failure" }).click();
-  await expect(page.locator(".notice[role=alert]")).toContainText("32768");
-  await page.getByLabel("Error, stack trace, logs, or SQL").fill("TypeError: failed");
-  await page.getByText("Environment details", { exact: false }).click();
-  await page.getByLabel("Runtime, framework, or deployment context").fill("not-a-pair");
-  await page.getByRole("button", { name: "Investigate failure" }).click();
-  await expect(page.locator(".notice[role=alert]")).toContainText("KEY=value");
-});
-
-test("network failure and unavailable saved sessions are recoverable", async ({ page }) => {
-  await page.route("**/api/investigations", (route) => route.abort("failed"));
-  await page.goto("/investigate?example=python");
-  await page.getByRole("button", { name: "Investigate failure" }).click();
-  await expect(page.locator(".notice[role=alert]")).toContainText("Could not reach");
-  await expect(page.getByRole("button", { name: "Investigate failure" })).toBeEnabled();
-  await page.unroute("**/api/investigations");
-  await page.goto("/investigate?id=missing-session");
-  await expect(page.locator(".notice[role=alert]")).toContainText("unavailable or has expired");
-});
-
-test("malformed streamed output is rejected without rendering a broken report", async ({
-  page,
-}) => {
-  await page.route("**/api/investigations", (route) =>
+test("malformed model stream and network failures preserve a usable composer", async ({ page }) => {
+  await page.route("**/api/threads/*/messages", (route) =>
     route.fulfill({
       status: 200,
       contentType: "text/event-stream",
-      body: 'data: {"type":"report","report":{"summary":"malformed"}}\n\ndata: {"type":"done"}\n\n',
+      body: 'data: {"type":"message","message":{"content":"invalid"}}\n\n',
     }),
   );
-  await page.goto("/investigate?example=javascript");
-  await page.getByRole("button", { name: "Investigate failure" }).click();
-  await expect(page.locator(".notice[role=alert]")).toContainText("report format");
-  await expect(
-    page.getByRole("heading", { name: "A clearer picture of the failure." }),
-  ).toHaveCount(0);
+  await page.goto("/");
+  await page.getByRole("textbox", { name: "Message Lockstep" }).fill("TypeError: failed");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.locator(".ls-main [role=alert]")).toContainText("unreadable");
+  await expect(page.getByRole("textbox", { name: "Message Lockstep" })).toBeEnabled();
+  await expect(page.locator(".ls-assistant-turn")).toHaveCount(0);
+  await page.unroute("**/api/threads/*/messages");
+  await page.route("**/api/threads/*/messages", (route) => route.abort("failed"));
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.locator(".ls-main [role=alert]")).toContainText("unreachable");
+  await expect(page.getByRole("textbox", { name: "Message Lockstep" })).toBeEnabled();
 });
 
-test("slow request can be cancelled and edited before retry", async ({ page }) => {
-  let releaseRequest = () => {};
-  const delayed = new Promise<void>((resolve) => {
-    releaseRequest = resolve;
+test("cancellation does not resubmit and the saved thread can be recovered", async ({ page }) => {
+  let release = () => {};
+  let count = 0;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
   });
-  let requestCount = 0;
-  await page.route("**/api/investigations", async (route) => {
-    requestCount += 1;
-    await delayed;
-    await route.abort().catch(() => undefined);
+  await page.route("**/api/threads/*/messages", async (route) => {
+    count++;
+    await held;
+    await route.abort().catch(() => {});
   });
-  await page.goto("/investigate?example=http");
-  await page.getByRole("button", { name: "Investigate failure" }).click();
-  await expect.poll(() => requestCount).toBe(1);
-  await page.getByRole("button", { name: "Cancel investigation" }).click();
-  releaseRequest();
-  await expect(page.getByText("Investigation cancelled", { exact: true })).toBeVisible();
+  await page.goto("/");
+  await page.getByRole("textbox", { name: "Message Lockstep" }).fill(FAILURE_EXAMPLES[0]!.input);
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect.poll(() => count).toBe(1);
+  await page.getByRole("button", { name: "Stop investigation", exact: true }).click();
+  release();
+  await expect(page.getByRole("textbox", { name: "Message Lockstep" })).toBeEnabled();
   await page.waitForLoadState("networkidle");
-  expect(requestCount).toBe(1);
-  await expect(page.getByLabel("Error, stack trace, logs, or SQL")).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Investigate failure" })).toBeEnabled();
+  expect(count).toBe(1);
+  await page.reload();
+  await expect(page.getByRole("textbox", { name: "Message Lockstep" })).toBeEnabled();
 });
 
-test("how-it-works and specialized SQL remain reachable", async ({ page }) => {
-  await page.goto("/how-it-works");
-  await expect(page.getByRole("heading", { name: "Reasoning you can inspect." })).toBeVisible();
-  await page.getByRole("link", { name: "SQL review" }).click();
-  await expect(page.getByText("Specialized PostgreSQL migration review")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Investigation workspace" })).toBeVisible();
+test("the validated final answer replaces provisional output", async ({ page }) => {
+  let savedThread: unknown = null;
+  await page.route("**/api/threads/*", async (route) => {
+    if (route.request().method() === "GET" && savedThread)
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(savedThread),
+      });
+    else await route.fallback();
+  });
+  await page.route("**/api/threads/*/messages", async (route) => {
+    const threadId = new URL(route.request().url()).pathname.split("/")[3]!;
+    const input = route.request().postDataJSON();
+    const now = new Date().toISOString();
+    const message = {
+      id: "mock-answer",
+      threadId,
+      role: "assistant",
+      content: "Validated final answer.",
+      createdAt: now,
+      status: "complete",
+      mode: "deterministic",
+      report: fixtureReport(),
+      clientTurnId: input.clientTurnId,
+      contextIds: [],
+    };
+    savedThread = {
+      id: threadId,
+      title: "TypeError investigation",
+      kind: "runtime_exception",
+      createdAt: now,
+      updatedAt: now,
+      status: "idle",
+      lastPreview: message.content,
+      contextIds: [],
+      messages: [
+        {
+          id: "mock-user",
+          threadId,
+          role: "user",
+          content: input.message,
+          createdAt: now,
+          status: "complete",
+          clientTurnId: input.clientTurnId,
+          contextIds: [],
+        },
+        message,
+      ],
+    };
+    const events = [
+      {
+        type: "delta",
+        threadId,
+        turnId: input.clientTurnId,
+        content: "PROVISIONAL_UNSUPPORTED_CLAIM",
+        provisional: true,
+      },
+      { type: "message", message },
+      { type: "done", threadId, turnId: input.clientTurnId },
+    ];
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(""),
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("textbox", { name: "Message Lockstep" }).fill("TypeError: failed");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.getByText("Validated final answer.", { exact: true })).toBeVisible();
+  await expect(page.getByText("PROVISIONAL_UNSUPPORTED_CLAIM", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "Message Lockstep" })).toBeEnabled();
 });
 
-test("specialized SQL review streams authenticated parser findings and a cited note", async ({
-  page,
-}, info) => {
+test("SQL uses the same agent and help explains real limits", async ({ page }) => {
   await page.goto("/sql");
-  await expect(page.getByLabel("Migration SQL")).toBeVisible();
-  await page
-    .getByLabel("Migration SQL")
-    .fill("DROP TABLE sessions;\nCREATE INDEX users_email_idx ON users (email);");
-  const socketPromise = page.waitForEvent("websocket");
-  await page.getByRole("button", { name: "Review", exact: true }).last().click();
-  const socket = await socketPromise;
-  expect(socket.url()).not.toContain("access_token");
-  await expect(page.getByText("Completed", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Data loss", { exact: false }).first()).toBeVisible();
-  await page.getByRole("radio", { name: "Rollout", exact: false }).click();
+  await expect(page.getByRole("combobox", { name: "Failure category" })).toHaveValue(
+    "sql_migration",
+  );
+  await send(page, "DROP TABLE sessions;\nCREATE INDEX users_email_idx ON users (email);");
+  await expect(page.locator(".ls-assistant-turn")).toContainText(/drop|loss|migration/i);
+  await page.getByRole("link", { name: "How Lockstep works", exact: true }).click();
   await expect(
-    page.getByText(
-      "Deterministic guidance based on parser findings and retrieved sources. AI drafting is unavailable.",
-      { exact: true },
-    ),
+    page.getByRole("heading", { name: "Start with the failure. Keep asking better questions." }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Copy rollout note" })).toBeVisible();
-  await page.screenshot({ path: info.outputPath("sql-review-desktop.png"), fullPage: true });
+});
+
+test("oversized messages and malformed environment details are rejected before sending", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("textbox", { name: "Message Lockstep" }).fill("x".repeat(32769));
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.locator(".ls-main [role=alert]")).toContainText("32768");
+  await page.getByRole("textbox", { name: "Message Lockstep" }).fill("TypeError: failed");
+  await page.getByRole("button", { name: "Environment", exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "Environment · one KEY=value per line" })
+    .fill("not-a-pair");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.locator(".ls-main [role=alert]")).toContainText("KEY=value");
+});
+test("navigating away from an interrupted turn cannot replace the selected thread", async ({
+  page,
+}) => {
+  await page.goto("/investigate");
+  await send(page, FAILURE_EXAMPLES[0]!.input);
+  const firstId = new URL(page.url()).searchParams.get("thread")!;
+  await page.getByRole("link", { name: "New investigation", exact: true }).click();
+  await send(page, FAILURE_EXAMPLES.find((item) => item.id === "http")!.input);
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/threads/*/messages", async (route) => {
+    await held;
+    await route.abort().catch(() => {});
+  });
+  await page.getByRole("textbox", { name: "Message Lockstep" }).fill("What should I inspect?");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Stop investigation", exact: true })).toBeVisible();
+  await page.locator(`.ls-recent-threads a[href*="${firstId}"]`).click();
+  release();
+  await expect(page.locator(".ls-user-turn").first()).toContainText("postal_code");
+  await page.waitForLoadState("networkidle");
+  expect(new URL(page.url()).searchParams.get("thread")).toBe(firstId);
+  await expect(page.locator(".ls-user-turn").first()).toContainText("postal_code");
+});
+
+test("SQLite failures receive a database investigation in the shared agent", async ({ page }) => {
+  await page.goto("/");
+  await send(
+    page,
+    "SQLITE_CONSTRAINT_UNIQUE: UNIQUE constraint failed: users.email\nINSERT INTO users (email) VALUES (?);",
+  );
+  await page
+    .locator(".ls-answer-tools")
+    .getByRole("button", { name: /Inspect \d+ sources/ })
+    .click();
+  await page.getByRole("tab", { name: "Report", exact: true }).click();
+  await expect(page.locator(".ls-report-detail")).toContainText(/SQLite|constraint|unique/i);
 });
