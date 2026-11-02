@@ -1,3 +1,4 @@
+import { getInvestigationAccessKey } from "./investigationClient";
 import { parseServerEvent, type ClientMessage, type ServerEvent } from "./protocol";
 import { reviewSocketUrl, workerHttpUrl } from "./worker";
 
@@ -15,7 +16,11 @@ export interface SessionHandle {
  * Opens one Worker session, sends a single message, and reports events until
  * `done` or `error`. After `close()` no handler runs again.
  */
-export function openSession(sessionId: string, payload: ClientMessage, handlers: SessionHandlers): SessionHandle {
+export function openSession(
+  sessionId: string,
+  payload: ClientMessage,
+  handlers: SessionHandlers,
+): SessionHandle {
   let finished = false;
   let socket: WebSocket;
 
@@ -24,7 +29,10 @@ export function openSession(sessionId: string, payload: ClientMessage, handlers:
   };
 
   try {
-    socket = new WebSocket(reviewSocketUrl(sessionId));
+    socket = new WebSocket(reviewSocketUrl(sessionId), [
+      "lockstep",
+      `capability.${getInvestigationAccessKey()}`,
+    ]);
   } catch {
     queueMicrotask(() => handlers.onFailure(unreachable()));
     return { close: finish };

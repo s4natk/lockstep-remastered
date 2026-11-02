@@ -1,3 +1,4 @@
+import { getInvestigationAccessKey } from "./investigationClient";
 import { readCitations, readParseResult, readTrace } from "./protocol";
 import { completedProgress, type ReviewRecord } from "./review";
 import { isRecord } from "./storage";
@@ -71,6 +72,7 @@ export async function fetchStoredReview(id: string): Promise<StoredReviewResult>
   let response: Response;
   try {
     response = await fetch(`${workerHttpUrl()}/api/sessions/${encodeURIComponent(id)}`, {
+      headers: { Authorization: `Bearer ${getInvestigationAccessKey()}` },
       cache: "no-store",
     });
   } catch {
