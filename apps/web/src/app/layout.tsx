@@ -1,31 +1,17 @@
 import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-
 import { PreferencesProvider } from "../components/providers/PreferencesProvider";
 import { ToastProvider } from "../components/providers/ToastProvider";
 import { PREFERENCES_BOOT_SCRIPT, THEME_COLORS } from "../lib/preferences";
 import "./globals.css";
-
-const sans = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist-sans",
-});
-
-const mono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-geist-mono",
-});
+import "./investigation.css";
 
 export const metadata: Metadata = {
-  title: {
-    default: "Lockstep",
-    template: "%s · Lockstep",
-  },
-  description: "PostgreSQL migration review workspace. Parse hazards, retrieve runbooks, and draft a cited rollout note.",
+  title: { default: "Lockstep — AI Debugging & Incident Investigation", template: "%s · Lockstep" },
+  description:
+    "Understand the error. Find the cause. Know what to do next. Evidence-grounded investigation for runtime errors, failed tests, API failures, logs, and SQL.",
   applicationName: "Lockstep",
 };
-
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.dark },
@@ -34,10 +20,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
 };
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: PREFERENCES_BOOT_SCRIPT }} />
       </head>
