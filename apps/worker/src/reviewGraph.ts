@@ -68,7 +68,6 @@ export function mockReviewModel(): ReviewModel {
       const text = [
         ...input.hazards.map((hazard) => withPeriod(hazard.reason)),
         ...input.chunks.map((chunk) => firstSentence(chunk.text)),
-        "Ship this on Friday without a backup.",
       ].join(" ");
       for (const part of text.split(/(\s+)/)) {
         if (part.length > 0) {
@@ -79,7 +78,10 @@ export function mockReviewModel(): ReviewModel {
   };
 }
 
-export function createReviewModel(apiKey: string | undefined, fetchImpl: typeof fetch = fetch): ReviewModel {
+export function createReviewModel(
+  apiKey: string | undefined,
+  fetchImpl: typeof fetch = fetch,
+): ReviewModel {
   if (apiKey === undefined || apiKey === "") {
     return mockReviewModel();
   }
@@ -276,10 +278,12 @@ function messageText(content: unknown): string {
 
 function createQueue<T>() {
   const items: T[] = [];
-  let waiting: {
-    resolve: (result: IteratorResult<T>) => void;
-    reject: (error: unknown) => void;
-  } | undefined;
+  let waiting:
+    | {
+        resolve: (result: IteratorResult<T>) => void;
+        reject: (error: unknown) => void;
+      }
+    | undefined;
   let closed = false;
   let failure: unknown;
 

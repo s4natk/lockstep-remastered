@@ -1,4 +1,4 @@
-﻿import type { Evidence, GuidanceStep, RootCauseHypothesis } from "@lockstep/shared";
+import type { Evidence, GuidanceStep, RootCauseHypothesis } from "@lockstep/shared";
 
 export function validateCitationIds(
   ids: readonly string[],

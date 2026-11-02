@@ -1,4 +1,4 @@
-﻿import {
+import {
   normalizeFailure,
   type InvestigationInput,
   type InvestigationProgress,

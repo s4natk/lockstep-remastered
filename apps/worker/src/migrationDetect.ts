@@ -9,7 +9,10 @@ export function looksLikeMigration(text: string): boolean {
   if (DDL.test(trimmed)) {
     return true;
   }
-  if (/;\s*$/.test(trimmed) && /\b(TABLE|INDEX|COLUMN|TYPE|CONSTRAINT|SCHEMA|DATABASE)\b/i.test(trimmed)) {
+  if (
+    /;\s*$/.test(trimmed) &&
+    /\b(TABLE|INDEX|COLUMN|TYPE|CONSTRAINT|SCHEMA|DATABASE)\b/i.test(trimmed)
+  ) {
     return true;
   }
   return false;

@@ -1,4 +1,4 @@
-﻿import type { FailureKind } from "@lockstep/shared";
+import type { FailureKind } from "@lockstep/shared";
 import { runbookChunks } from "./runbookChunks.js";
 
 export interface InvestigationRunbook {

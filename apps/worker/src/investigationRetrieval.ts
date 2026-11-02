@@ -1,4 +1,4 @@
-﻿import type { Evidence, NormalizedFailureContext } from "@lockstep/shared";
+import type { Evidence, NormalizedFailureContext } from "@lockstep/shared";
 import type { Env } from "./env.js";
 import { createEmbedder } from "./embeddings.js";
 import { reciprocalRankFusion } from "./hybridSearch.js";

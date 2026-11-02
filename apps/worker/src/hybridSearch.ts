@@ -5,10 +5,7 @@ import { withSpan } from "./tracing.js";
 const RRF_K = 60;
 
 export interface VectorSearch {
-  query(
-    vector: number[],
-    options?: { topK?: number },
-  ): Promise<{ matches: Array<{ id: string }> }>;
+  query(vector: number[], options?: { topK?: number }): Promise<{ matches: Array<{ id: string }> }>;
 }
 
 export function reciprocalRankFusion(rankings: string[][], k = RRF_K): string[] {
@@ -46,7 +43,9 @@ export async function hybridSearch(options: {
   const vectorize = options.vectorize;
   const vectorIds = vectorize
     ? await vectorIdsOrLocal(vectorize, options.chunks, options.embedder, options.query, limit)
-    : await withSpan("retrieval.embed", () => localVectorIds(options.chunks, options.embedder, options.query));
+    : await withSpan("retrieval.embed", () =>
+        localVectorIds(options.chunks, options.embedder, options.query),
+      );
   const fused = reciprocalRankFusion([keywordIds, vectorIds]).slice(0, limit);
   const byId = new Map(options.chunks.map((chunk) => [chunk.id, chunk]));
   return fused.flatMap((id) => {
@@ -63,7 +62,9 @@ async function vectorIdsOrLocal(
   limit: number,
 ): Promise<string[]> {
   try {
-    return await withSpan("retrieval.vectorize", () => vectorizeIds(vectorize, embedder, query, limit));
+    return await withSpan("retrieval.vectorize", () =>
+      vectorizeIds(vectorize, embedder, query, limit),
+    );
   } catch {
     return withSpan("retrieval.embed", () => localVectorIds(chunks, embedder, query));
   }
@@ -92,5 +93,7 @@ async function localVectorIds(
       score: cosineSimilarity(queryVector, await embedder.embed(chunk.text)),
     })),
   );
-  return scored.sort((left, right) => right.score - left.score || left.id.localeCompare(right.id)).map((entry) => entry.id);
+  return scored
+    .sort((left, right) => right.score - left.score || left.id.localeCompare(right.id))
+    .map((entry) => entry.id);
 }

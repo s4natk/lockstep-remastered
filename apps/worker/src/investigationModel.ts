@@ -1,4 +1,4 @@
-﻿import type { NormalizedFailureContext } from "@lockstep/shared";
+import type { NormalizedFailureContext } from "@lockstep/shared";
 import type { InvestigationDraft } from "./investigationGuidance.js";
 import { investigationDraftSchema, validateInvestigationDraft } from "./investigationValidation.js";
 

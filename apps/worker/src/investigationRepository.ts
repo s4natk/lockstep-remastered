@@ -1,4 +1,4 @@
-﻿import {
+import {
   isInvestigationReport,
   type FailureKind,
   type InvestigationReport,

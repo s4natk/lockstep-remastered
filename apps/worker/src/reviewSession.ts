@@ -8,9 +8,11 @@ import { createReviewModel, streamReview } from "./reviewGraph.js";
 import { runbookChunks } from "./runbookChunks.js";
 import { readSessionMessage } from "./sessionMessage.js";
 import { SessionRepository } from "./sessionRepository.js";
+import { InvestigationRepository } from "./investigationRepository.js";
 
 export class ReviewSession implements DurableObject {
   private readonly sessions: SessionRepository;
+  private running = false;
 
   constructor(
     _state: DurableObjectState,
@@ -29,15 +31,45 @@ export class ReviewSession implements DurableObject {
     server.accept();
     const sessionId = sessionIdFrom(request);
     server.addEventListener("message", (event) => {
-      void this.onMessage(server, sessionId, String(event.data));
+      if (this.running) {
+        send(server, { type: "error", error: "A review is already running in this session." });
+        return;
+      }
+      this.running = true;
+      void this.onMessage(
+        server,
+        sessionId,
+        String(event.data),
+        request.headers.get("X-Lockstep-Owner") ?? "",
+      )
+        .catch(() => send(server, { type: "error", error: "The request could not be completed." }))
+        .finally(() => {
+          this.running = false;
+        });
     });
-    return new Response(null, { status: 101, webSocket: client });
+    return new Response(null, {
+      status: 101,
+      webSocket: client,
+      headers: { "Sec-WebSocket-Protocol": "lockstep" },
+    });
   }
 
-  private async onMessage(server: WebSocket, sessionId: string, raw: string): Promise<void> {
+  private async onMessage(
+    server: WebSocket,
+    sessionId: string,
+    raw: string,
+    ownerHash: string,
+  ): Promise<void> {
     const request = readSessionMessage(raw);
     if ("error" in request) {
       send(server, { type: "error", error: request.error });
+      return;
+    }
+    if (!ownerHash || !(await new InvestigationRepository(this.env.DB).admit(ownerHash))) {
+      send(server, {
+        type: "error",
+        error: "Investigation limit reached. Wait a minute and retry.",
+      });
       return;
     }
     const { kind, text, context } = request;
@@ -78,7 +110,10 @@ export class ReviewSession implements DurableObject {
       }
       send(server, { type: "done", sessionId, intent: "chat", reply });
     } catch {
-      send(server, { type: "error", error: "The assistant could not respond. Check OPENAI_API_KEY." });
+      send(server, {
+        type: "error",
+        error: "The assistant could not respond. Check OPENAI_API_KEY.",
+      });
     }
   }
 
@@ -96,18 +131,22 @@ export class ReviewSession implements DurableObject {
       sql,
       parseJson: JSON.stringify(parsed),
     });
-    for await (const event of streamReview(sql, {
-      parse: async () => parsed,
-      search: (query) =>
-        hybridSearch({
-          chunks: runbookChunks,
-          query,
-          embedder: createEmbedder(this.env.OPENAI_API_KEY),
-          vectorize: this.env.VECTORIZE,
-          limit: 3,
-        }),
-      model: createReviewModel(this.env.OPENAI_API_KEY),
-    }, context)) {
+    for await (const event of streamReview(
+      sql,
+      {
+        parse: async () => parsed,
+        search: (query) =>
+          hybridSearch({
+            chunks: runbookChunks,
+            query,
+            embedder: createEmbedder(this.env.OPENAI_API_KEY),
+            vectorize: this.env.VECTORIZE,
+            limit: 3,
+          }),
+        model: createReviewModel(this.env.OPENAI_API_KEY),
+      },
+      context,
+    )) {
       if (event.type === "token") {
         send(server, { type: "token", content: event.content });
         continue;
@@ -132,5 +171,9 @@ function sessionIdFrom(request: Request): string {
 }
 
 function send(server: WebSocket, message: unknown): void {
-  server.send(JSON.stringify(message));
+  try {
+    server.send(JSON.stringify(message));
+  } catch {
+    /* The browser may have disconnected during a provider response. */
+  }
 }

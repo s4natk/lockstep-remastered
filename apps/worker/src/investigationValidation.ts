@@ -37,6 +37,19 @@ export function validateInvestigationDraft(
 ): value is InvestigationDraft {
   if (
     !object(value) ||
+    Object.keys(value).some(
+      (key) =>
+        ![
+          "summary",
+          "primaryHypothesis",
+          "alternatives",
+          "remediation",
+          "verification",
+          "missingInformation",
+          "confidence",
+          "limitations",
+        ].includes(key),
+    ) ||
     !text(value.summary) ||
     !(value.primaryHypothesis === null || hypothesis(value.primaryHypothesis)) ||
     !Array.isArray(value.alternatives) ||

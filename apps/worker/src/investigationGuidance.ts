@@ -1,4 +1,4 @@
-﻿import type { GuidanceStep, NormalizedFailureContext, RootCauseHypothesis } from "@lockstep/shared";
+import type { GuidanceStep, NormalizedFailureContext, RootCauseHypothesis } from "@lockstep/shared";
 
 export interface InvestigationDraft {
   summary: string;

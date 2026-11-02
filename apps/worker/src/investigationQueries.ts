@@ -1,4 +1,4 @@
-﻿import type { NormalizedFailureContext, RetrievalQuery } from "@lockstep/shared";
+import type { NormalizedFailureContext, RetrievalQuery } from "@lockstep/shared";
 import { indexTokens } from "./runbookIndex.js";
 
 export function investigationQueries(context: NormalizedFailureContext): RetrievalQuery[] {

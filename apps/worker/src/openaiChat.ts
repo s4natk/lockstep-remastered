@@ -1,14 +1,22 @@
 const CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
-export async function* readChatDeltaStream(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+export async function* readChatDeltaStream(
+  body: ReadableStream<Uint8Array>,
+): AsyncGenerator<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let totalBytes = 0;
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) {
         break;
+      }
+      totalBytes += value.byteLength;
+      if (totalBytes > 100_000) {
+        await reader.cancel();
+        throw new Error("Provider output exceeds size limit");
       }
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
@@ -52,6 +60,7 @@ export async function* streamOpenAiChat(options: {
   const fetchImpl = options.fetchImpl ?? fetch;
   const response = await fetchImpl(CHAT_URL, {
     method: "POST",
+    signal: AbortSignal.timeout(25_000),
     headers: {
       authorization: `Bearer ${options.apiKey}`,
       "content-type": "application/json",
@@ -59,6 +68,8 @@ export async function* streamOpenAiChat(options: {
     body: JSON.stringify({
       model: options.model ?? "gpt-4.1-mini",
       stream: true,
+      max_completion_tokens: 1600,
+      store: false,
       messages: [
         {
           role: "system",

@@ -1,20 +1,28 @@
-﻿import type { Evidence, NormalizedFailureContext, ParseResult } from "@lockstep/shared";
+import type { Evidence, NormalizedFailureContext, ParseResult } from "@lockstep/shared";
 
 export function addSqlEvidence(
   context: NormalizedFailureContext,
   parsed: ParseResult,
 ): NormalizedFailureContext {
-  const evidence: Evidence[] = parsed.hazards.slice(0, 128).map((hazard, index) => ({
-    id: `sql:${index + 1}`,
-    kind: "sql_parser",
-    label: `SQL statement ${hazard.statementIndex + 1}: ${hazard.code}`,
-    content: `${hazard.reason}\n${hazard.sql}`,
-    provenance: {
-      sourceId: `statement:${hazard.statementIndex}`,
-      lineStart: lineAtByte(context.input.rawInput, hazard.start),
-      lineEnd: lineAtByte(context.input.rawInput, hazard.end),
-    },
-  }));
+  const hazards = parsed.hazards.slice(0, 128);
+  const seen = new Set<number>();
+  const evidence: Evidence[] = hazards.flatMap((hazard): Evidence[] => {
+    if (seen.has(hazard.statementIndex)) return [];
+    seen.add(hazard.statementIndex);
+    return [
+      {
+        id: `sql:${hazard.statementIndex + 1}`,
+        kind: "sql_parser",
+        label: `SQL statement ${hazard.statementIndex + 1}`,
+        content: hazard.sql,
+        provenance: {
+          sourceId: `statement:${hazard.statementIndex}`,
+          lineStart: lineAtByte(context.input.rawInput, hazard.start),
+          lineEnd: lineAtByte(context.input.rawInput, hazard.end),
+        },
+      },
+    ];
+  });
   return {
     ...context,
     warnings: [
@@ -31,14 +39,12 @@ export function addSqlEvidence(
     ],
     findings: [
       ...context.findings,
-      ...parsed.hazards
-        .slice(0, 128)
-        .map((hazard, index) => ({
-          id: `sql-finding:${index + 1}`,
-          code: `sql_${hazard.code}`,
-          message: hazard.reason,
-          evidenceIds: [`sql:${index + 1}`],
-        })),
+      ...hazards.map((hazard, index) => ({
+        id: `sql-finding:${index + 1}`,
+        code: `sql_${hazard.code}`,
+        message: hazard.reason,
+        evidenceIds: [`sql:${hazard.statementIndex + 1}`],
+      })),
     ],
     evidence: [...context.evidence, ...evidence],
     metadata: {

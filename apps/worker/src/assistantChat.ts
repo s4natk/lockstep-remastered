@@ -21,6 +21,7 @@ export async function* streamAssistantReply(
   }
   const response = await fetchImpl(CHAT_URL, {
     method: "POST",
+    signal: AbortSignal.timeout(25_000),
     headers: {
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
@@ -28,6 +29,8 @@ export async function* streamAssistantReply(
     body: JSON.stringify({
       model: "gpt-4.1-mini",
       stream: true,
+      max_completion_tokens: 1200,
+      store: false,
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: trimmed },
@@ -43,7 +46,7 @@ export async function* streamAssistantReply(
 async function* mockAssistantReply(text: string): AsyncGenerator<string> {
   const lower = text.toLowerCase();
   if (/^(hi|hello|hey|yo|sup|howdy)\b/.test(lower)) {
-    yield "Hi! I'm Lockstep. Paste a Postgres migration and I'll stream a rollout note with hazards and runbook citations—or ask me about safe DDL patterns.";
+    yield "Hi! I'm Lockstep. Paste a Postgres migration and I'll stream a rollout note with hazards and runbook citationsâ€”or ask me about safe DDL patterns.";
     return;
   }
   if (isOffTopic(lower)) {

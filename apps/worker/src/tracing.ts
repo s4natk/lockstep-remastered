@@ -23,13 +23,14 @@ export interface TraceSummary {
 }
 
 export async function withSpan<T>(name: string, fn: () => Promise<T>): Promise<T> {
+  if (exporter.getFinishedSpans().length > 512) exporter.reset();
   return tracer.startActiveSpan(name, async (span) => {
     try {
       const result = await fn();
       span.setStatus({ code: SpanStatusCode.OK });
       return result;
     } catch (error) {
-      span.recordException(error instanceof Error ? error : new Error(String(error)));
+      // Record only a fixed status; provider errors can contain submitted material.
       span.setStatus({ code: SpanStatusCode.ERROR });
       throw error;
     } finally {

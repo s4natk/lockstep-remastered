@@ -1,4 +1,4 @@
-﻿import { Hono } from "hono";
+import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import {
   INPUT_LIMITS,
@@ -21,6 +21,7 @@ investigationApi.use("*", async (c, next) => {
     );
   c.set("ownerHash", ownerHash);
   await next();
+  c.header("Cache-Control", "no-store");
 });
 
 investigationApi.post("/", async (c) => {
