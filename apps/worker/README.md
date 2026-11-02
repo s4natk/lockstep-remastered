@@ -1,53 +1,47 @@
-# @lockstep/worker
+# Worker
 
-## Local dev
+Hono routes run in Cloudflare Workers. New investigations use bounded deterministic
+parsing, bundled runbooks, optional OpenAI/Vectorize, strict report validation, and
+owner-scoped D1 persistence. The SQL workspace retains LangGraph and the ReviewSession
+Durable Object with authenticated WebSockets.
 
-From the repo root:
+Run `pnpm dev:worker` from the repository root. See the root README for environment,
+D1 provisioning, optional vector indexing, origin restrictions, and deployment.
+The checked-in D1 identifier is a placeholder for a new database; it does not target
+the original application's resources.
 
-```text
-pnpm --filter @lockstep/worker dev
-```
+## API
 
-Wrangler serves the Worker at `http://localhost:8787`. The Next.js app on port 3000 is allowed to call it.
+| Method and route                 | Behavior                                                    |
+| -------------------------------- | ----------------------------------------------------------- |
+| GET `/health`                    | Provider configuration state; no secrets                    |
+| POST `/api/investigations`       | Validated investigation; JSON or SSE when requested         |
+| GET `/api/investigations`        | Current capability's history, maximum 100                   |
+| GET `/api/investigations/:id`    | Complete report or actionable incomplete/not-found response |
+| DELETE `/api/investigations/:id` | Delete only the current capability's report                 |
+| POST `/api/parse`                | Stateless bounded Rust/WASM SQL classification              |
+| GET `/api/sessions/:id`          | Capability-authorized specialized SQL review                |
+| GET `/agent/connect/:sessionId`  | Owned SQL Durable Object WebSocket                          |
 
-## Local D1
+Investigation and saved SQL routes require `Authorization: Bearer <browser capability>`.
+The browser generates and retains the capability; these are not provider API keys.
+WebSockets offer `lockstep` and `capability.<browser capability>` subprotocols and negotiate
+only `lockstep`. The token is never placed in the request URL. Origin checks apply.
 
-`database_id` in `wrangler.toml` is a placeholder. Local commands do not need a Cloudflare account.
+SSE uses JSON `data` events: `stage`, `report`, `done`, or `error`. Stage events correspond
+to actual execution. A report is persisted before it is emitted. Disconnects abort
+provider work where possible and mark unfinished runs cancelled; clients recover
+completed reports from History instead of replaying a partial response.
 
-```text
-pnpm --filter @lockstep/worker exec wrangler d1 execute lockstep --local --file=schema.sql
-```
+D1 migration files describe investigations, quota buckets, and SQL session ownership.
+Runtime schema initialization also supports a fresh local database. Only report
+evidence is persisted for generalized failures, not an additional raw-input copy.
+Trace records contain names and durations without inputs, credential values, or
+provider response bodies.
 
-That applies `schema.sql` to the local SQLite database. Replace `database_id` with the id from `wrangler d1 create lockstep` when you deploy. Vectorize and a paid Workers plan are not required to run `/health` and `/api/parse` locally.
+The global admission limit is 60 investigations per minute and the per-capability
+limit is 10. Both the generalized endpoint and specialized SQL messages use admission
+limits. Public stateless parsing still enforces payload and input bounds.
 
-## Vectorize
-
-Hybrid search uses the `VECTORIZE` binding when it is present and a local cosine index otherwise. Leave the binding out for local dev. Add it after creating a 64-dimension cosine index:
-
-```toml
-[[vectorize]]
-binding = "VECTORIZE"
-index_name = "lockstep-runbooks"
-```
-
-Without `OPENAI_API_KEY`, embeddings are a deterministic local hash, not an OpenAI call.
-
-## Parse
-
-```text
-curl -s http://localhost:8787/api/parse -H "content-type: application/json" -d "{\"sql\":\"DROP TABLE sessions\"}"
-```
-
-A blank `sql` field, a non-JSON body, or SQL the parser rejects returns `400` and `{ "error": "..." }`.
-
-## Review session
-
-Connect a WebSocket to `/agent/connect/:sessionId` and send `{ "type": "review", "sql": "..." }`. The socket sends the parser JSON first, then `{ "type": "token" }` messages, then `{ "type": "done" }` with the checked note. The Durable Object writes that review to D1. `GET /api/sessions/:id` reads it back.
-
-## Tests
-
-```text
-pnpm --filter @lockstep/worker test
-```
-
-Retrieval recall is printed by `pnpm --filter @lockstep/worker eval:retrieval`. The line says `local-hash` or `openai` so the number is tied to the embedder that ran. It is not copied into this file ahead of a run.
+Tests use actual local Wrangler bindings and controlled provider responses. They do
+not perform cloud deployment or require live provider credentials.

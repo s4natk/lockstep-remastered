@@ -1,390 +1,204 @@
 # Lockstep
 
-**Postgres migration review agent on Cloudflare Workers** — Rust classifies dangerous DDL, hybrid RAG retrieves runbooks, and a LangGraph draft streams a citation-grounded rollout note.
+**AI debugging and incident investigation**
 
-A full-stack edge application that reviews SQL migrations using **WebAssembly-accelerated parsing**, **retrieval-augmented generation (RAG)**, **LangGraph orchestration**, and **real-time WebSocket streaming** — with OpenTelemetry span summaries and session persistence on Cloudflare D1. Frontend on Vercel; compute and agent state on Cloudflare’s global edge.
+Understand the error. Find the cause. Know what to do next.
 
-**[Live demo](https://lockstep-eta.vercel.app/)** · **[API / Worker](https://lockstep.mrkanwalsanat.workers.dev/health)**
+Lockstep turns failure excerpts into structured investigations: deterministic observations,
+working hypotheses, traceable evidence, remediation, verification, and missing context.
+It preserves the original PostgreSQL migration analyzer as a specialized workspace.
 
----
+## Supported inputs
 
-## Project overview
+- Python, JavaScript/TypeScript, and Java exceptions; representative Rust panics.
+- Pytest, Jest/Vitest, assertion mismatches, and recognizable CI excerpts.
+- HTTP 400, 401, 403, 404, 429, 500; JSON responses and common connectivity failures.
+- Plain, timestamped, JSON, and newline-delimited JSON application logs.
+- PostgreSQL errors, constraint violations, and schema failures.
+- PostgreSQL migrations, parsed by the retained Rust/WASM analyzer.
 
-Lockstep demonstrates a modern **edge-native agent** for database migrations:
+These are signature-based parsers, not complete language or log-format implementations.
+Unknown input remains inspectable and produces explicit warnings. Submitted code, SQL,
+and shell commands are never executed.
 
-- **Parses migrations** with a **Rust → WebAssembly** module (`sqlparser`, Postgres dialect). Hazard labels (`data_loss`, `lock_risk`, `rewrite`) come from the parser, not the LLM.
-- **Retrieves runbooks** with **hybrid search**: keyword rank + embedding cosine similarity, fused with **reciprocal rank fusion (RRF)**. Uses **Cloudflare Vectorize** when bound; falls back to in-memory scoring locally or when Vectorize is unavailable.
-- **Drafts rollout notes** with **LangGraph** and LangChain `ChatPromptTemplate`. **OpenAI `gpt-4.1-mini`** streams when `OPENAI_API_KEY` is set; otherwise a mock model quotes parser and runbook text for demos.
-- **Grounds every sentence** with a **citation checker** — uncited lines are dropped. Sources: parser reasons, retrieved runbooks, or optional user context from the sidebar.
-- **Routes chat vs review** — casual messages (e.g. “hi”) get a scoped assistant reply; DDL/SQL triggers the full review pipeline.
-- **Streams tokens** over a **WebSocket** on a **Durable Object** (`ReviewSession`), then persists the session in **D1**.
-- **Traces** `wasm.parse`, `retrieval.hybrid`, `retrieval.embed` / `retrieval.vectorize`, and `review.draft` with **OpenTelemetry**-style span summaries in the UI.
-- **Serves a Next.js chat UI** (React, TypeScript, custom CSS) with an optional **context rail** (localStorage) that is sent with each SQL review.
+## Run locally
 
-**Key achievement:** **94/100 recall@3** on 100 bundled runbook eval questions with the local-hash embedder (`pnpm eval:retrieval`); **25** labeled migration fixtures validated by `cargo test` for the Wasm parser — no always-on servers, only Workers + Durable Objects at the edge.
+Requirements: Node.js 24+, pnpm 11.9.0, and Rust for analyzer development.
 
----
+```sh
+pnpm install --frozen-lockfile
+pnpm dev:worker
+```
+
+In another terminal:
+
+```sh
+pnpm dev:web
+```
+
+Open `http://localhost:3000`. Wrangler serves the backend on port 8787 with local D1
+and Durable Objects. The schema is initialized on first use. No cloud credentials or
+model key are required for deterministic analysis.
+
+On Windows PowerShell with script execution disabled, use `pnpm.cmd` instead of `pnpm`.
+Both dev processes are foreground processes that can be stopped with Ctrl+C.
+
+The web app defaults to the local backend. To change it, copy
+`apps/web/.env.example` to `apps/web/.env.local` and set `NEXT_PUBLIC_WORKER_URL`.
+This is a public backend origin, never a provider credential.
+
+For AI reports, copy `apps/worker/.dev.vars.example` to `.dev.vars` in that directory
+and set `OPENAI_API_KEY`. `OPENAI_MODEL` optionally changes the default `gpt-4.1-mini`.
+Live OpenAI calls send relevant input evidence and optional context to the provider.
+Without a key, or when a provider response is unavailable, refused, malformed, or
+contains invalid evidence references, the UI clearly labels deterministic analysis.
+
+## Workspaces
+
+- `/`: product introduction and direct links into implemented examples.
+- `/investigate`: category selection, original failure input, description, environment,
+  streamed pipeline stages, cancellation, reports, and JSON export.
+- `/history`: persisted investigations, report reopening, and deletion.
+- `/how-it-works`: evidence and workflow explanation.
+- `/sql`: retained SQL editor, deterministic hazards, LangGraph review, WebSocket
+  progress, rollout guidance, source references, and trace timings.
+
+Reports separate observations from hypotheses. Citation validation checks source
+identity and rejects missing references; it does not prove that an inferred cause
+is true. Confidence is qualitative, and deterministic reports remain low confidence.
 
 ## Architecture
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                     Next.js Frontend (Vercel)                   │
-│   • WebSocket client for streaming reviews and chat             │
-│   • Context rail (browser localStorage)                         │
-│   • Example migrations and rollout-note details                 │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │  WebSocket / HTTPS
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  Cloudflare Worker (Hono)                         │
-│                                                                 │
-│   ┌───────────────┐   ┌───────────────┐   ┌───────────────┐     │
-│   │ ReviewSession │   │  Rust WASM    │   │ Vector search │     │
-│   │ Durable Object│   │  sql_guard    │   │ Vectorize or  │     │
-│   │               │   │               │   │ in-memory     │     │
-│   │ • WebSocket   │   │ • DDL split   │   │ • Embeddings  │     │
-│   │ • Streaming   │   │ • Hazard tags │   │ • Keyword RRF │     │
-│   │ • D1 save     │   │               │   │               │     │
-│   └───────┬───────┘   └───────────────┘   └───────┬───────┘     │
-│           │                                       │             │
-│           │           ┌───────────────┐           │             │
-│           └──────────>│   LangGraph   │<──────────┘             │
-│                       │ parse → search│                         │
-│                       │ → draft       │                         │
-│                       │ citation check│                         │
-│                       └───────┬───────┘                         │
-│                               │                                 │
-│                               ▼                                 │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │ OpenAI API (when OPENAI_API_KEY is set on the Worker)   │   │
-│   │ • gpt-4.1-mini streaming (draft + chat assistant)       │   │
-│   │ • text-embedding-3-small (64-dim for retrieval)         │   │
-│   └─────────────────────────┬───────────────────────────────┘   │
-│                             ▼                                   │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │ D1: sessions (sql, parse JSON, note, citations, trace)  │   │
-│   └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+  UI[Next.js investigation workspace] --> API[Hono private API]
+  API --> Parse[Validate, classify, normalize]
+  Parse --> SQL[Rust/WASM for migrations]
+  Parse --> Retrieve[Keyword runbooks or optional Vectorize + RRF]
+  SQL --> Retrieve
+  Retrieve --> Draft[Structured OpenAI draft or deterministic guidance]
+  Draft --> Validate[Schema and evidence-reference validation]
+  Validate --> Report[Typed investigation report]
+  Report --> D1[Owner-scoped D1 history]
+  Report --> UI
+  API -. actual stage events via SSE .-> UI
+  Legacy[SQL workspace] --> DO[Durable Object + LangGraph + WebSocket]
 ```
 
----
+`packages/shared` owns versioned contracts, runtime validation, deterministic parsing,
+source provenance, and report guards. Worker modules separate query construction,
+retrieval, model calls, validation, guidance, orchestration, and persistence. The new
+workflow uses modular typed stages; the specialized SQL workflow retains LangGraph
+and LangChain where already useful.
 
-## Tech stack
+New investigations use bundled keyword retrieval by default. Optional Vectorize
+fuses keyword and OpenAI embedding rankings using Reciprocal Rank Fusion. Keyword
+fallback is explicitly identified and is not presented as semantic search. The retained
+SQL graph also supports local hash ranking for offline evaluation; those hash vectors
+are not production embeddings.
 
-### Backend (Cloudflare Workers)
+The web build uses webpack extension aliases so shared TypeScript modules with `.js`
+import specifiers resolve consistently. Fonts use the system stack; builds do not fetch
+Google Fonts.
 
-| Area | Choice |
-| --- | --- |
-| Runtime | Cloudflare Workers (V8 isolates) |
-| Router | Hono |
-| Stateful agent | Durable Objects (`ReviewSession`) |
-| Database | Cloudflare D1 |
-| Vector DB | Cloudflare Vectorize (optional; in-memory fallback) |
-| AI | OpenAI API (`gpt-4.1-mini`, embeddings) |
-| Agent graph | LangGraph + LangChain prompts |
-| WASM | Rust (`packages/sql_guard`), `wasm-pack --target web` |
+## Privacy and limits
 
-### Frontend (Next.js)
+A random 256-bit browser capability authorizes private history. Only its SHA-256 digest
+is stored on the server. Requests use bearer headers; SQL WebSockets carry the key in
+an offered subprotocol, not a URL. Clearing site storage loses access to that browser's
+history. This is capability-based access, not account login, SSO, or cross-device sync.
+Anyone holding the capability can access its investigations. Use HTTPS outside localhost.
 
-| Area | Choice |
-| --- | --- |
-| Framework | Next.js App Router, React 19, TypeScript |
-| UI | Custom global CSS (no Tailwind) |
-| Deploy | [Vercel](https://lockstep-eta.vercel.app/) |
-| Config | `NEXT_PUBLIC_WORKER_URL` → Worker origin |
+History is owner-filtered, capped at 100 investigations per capability, and marked
+`no-store`. The backend records running, failed, cancelled, and completed states.
+An interrupted client can reopen a completed report from History; it cannot resume a
+partially generated AI response. Retrying starts a new investigation.
 
-### Observability and tests
+Input is limited to 32,768 UTF-16 code units and 65,536 UTF-8 payload bytes, with bounded
+optional fields. Evidence and findings have explicit caps and warnings. D1 admission
+limits allow 10 investigations per capability and 60 globally per minute. These are
+application resource limits, not a substitute for deployment-level abuse protection.
+Model calls, embeddings, retrieved results, output sizes, and stored report sizes are
+bounded. Traces record stage names and durations, not submissions or provider errors.
 
-- OpenTelemetry span names/durations on parse, retrieval, and draft
-- Worker tests: health, parse API, WebSocket review + chat, hybrid search, citation check, review graph
-- Parser: `cargo test` on 25 SQL fixtures
-- CI: typecheck + worker tests (GitHub Actions)
+Remove credentials and personal information before submitting. Evidence is persisted
+in reports and can contain the submitted material. Logs and retrieved sources are
+untrusted data; provider prompts prohibit embedded instructions, and model output
+cannot replace trusted identity, observations, or evidence. There is no automatic fix
+execution.
 
-### Tooling
+## Checks and evaluation
 
-- pnpm workspaces, `@lockstep/shared` types
-- Wrangler CLI, GitHub Action for PR parser comments (`action.yml`)
-
----
-
-## Live demo
-
-| | URL |
-| --- | --- |
-| **Frontend** | [https://lockstep-eta.vercel.app/](https://lockstep-eta.vercel.app/) |
-| **Worker API** | [https://lockstep.mrkanwalsanat.workers.dev/health](https://lockstep.mrkanwalsanat.workers.dev/health) |
-| **Health check** | [https://lockstep.mrkanwalsanat.workers.dev/health](https://lockstep.mrkanwalsanat.workers.dev/health) |
-
-If the UI shows **“worker offline”**, set `NEXT_PUBLIC_WORKER_URL=https://lockstep.mrkanwalsanat.workers.dev` in Vercel (Production), then **redeploy** the web app so the build picks up the variable.
-
-### How to find your Worker URL after deploy
-
-From `apps/worker`:
-
-```bash
-pnpm exec wrangler deploy
+```sh
+pnpm lint
+pnpm format:check
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm test:rust
+pnpm eval:retrieval
+pnpm eval:investigations
+pnpm exec playwright install chromium
+pnpm test:e2e
+pnpm security:scan
+pnpm audit --audit-level moderate
 ```
 
-Wrangler prints a line like:
+Playwright starts local frontend and backend processes. Tests cover real submissions,
+private persistence, SQL review, keyboard interaction, responsive layouts, cancellation,
+network failures, and invalid responses. See [verification](docs/verification.md) for
+commands actually executed and their results, and [evaluation](eval/README.md) for
+fixture design and measurement limitations.
 
-```text
-https://lockstep.<your-subdomain>.workers.dev
+`security:scan` examines reachable history, staged blobs, source files, and historical
+filenames using Secretlint and high-signal repository rules. It is a useful release
+check, not proof that no secret can exist. `release:audit` additionally validates the
+initial 37-commit Toronto timestamp schedule; ordinary development does not require
+rewriting that release history.
+
+## Deploy
+
+The repository is not preconfigured to use the original application's Cloudflare
+resources. Provision your own D1 database and replace the placeholder ID in
+`apps/worker/wrangler.toml`:
+
+```sh
+pnpm --filter @lockstep/worker exec wrangler d1 create lockstep-remastered
+pnpm --filter @lockstep/worker exec wrangler d1 migrations apply lockstep-remastered --remote
+pnpm --filter @lockstep/worker exec wrangler secret put OPENAI_API_KEY
+pnpm --filter @lockstep/worker exec wrangler deploy
 ```
 
-That origin (no trailing slash) is your **API endpoint** and the value for `NEXT_PUBLIC_WORKER_URL`.
+Set `ALLOWED_ORIGINS` to the deployed frontend origin. The Durable Object migration
+is included. Deploy `apps/web` as a Next.js application and set
+`NEXT_PUBLIC_WORKER_URL` to the new Worker origin before building.
 
-### Test cases to try
+For optional semantic retrieval, provision a 64-dimensional cosine Vectorize index,
+export the bundled public runbooks using an OpenAI key in the shell environment, and
+upload their vectors:
 
-#### 1. Say hi (chat mode)
-
-In the composer, send:
-
-```text
-hi
+```sh
+pnpm --filter @lockstep/worker exec wrangler vectorize create lockstep-remastered-runbooks --dimensions 64 --metric cosine --binding VECTORIZE --update-config
+pnpm --filter @lockstep/worker vector:export
+pnpm --filter @lockstep/worker exec wrangler vectorize upsert lockstep-remastered-runbooks --file runbook-vectors.ndjson
 ```
 
-**Expected:** A short greeting explaining that Lockstep reviews Postgres migrations and can answer DDL questions or review pasted SQL.
-
-#### 2. Drop a table (review mode)
-
-```sql
-DROP TABLE sessions;
-```
-
-**Expected:** Streaming rollout note quoting `DROP TABLE deletes the table and its rows.` Details show hazard `data_loss`, citations (`statement:0`, `drop-table` runbook), and trace spans (`wasm.parse`, retrieval, `review.draft`).
-
-#### 3. Rewrite risk
-
-```sql
-ALTER TABLE users ALTER COLUMN age TYPE bigint;
-```
-
-**Expected:** Hazard `rewrite`; retrieval favors the `alter-type` runbook.
-
-#### 4. Add sidebar context
-
-In **Extra context**, save: `Require a backup before dropping production tables.` Then run the `DROP TABLE` example again.
-
-**Expected:** Context appears in the prompt as `context-0` and can show up in the note with a `context` citation.
-
-#### 5. REST parser (no LLM)
-
-```bash
-curl -s https://lockstep.mrkanwalsanat.workers.dev/api/parse \
-  -H "content-type: application/json" \
-  -d "{\"sql\":\"DROP TABLE sessions\"}"
-```
-
-**Expected:** JSON with `data_loss` hazard and parser reason string.
-
----
-
-## Development phases
-
-| Phase | Objective | Key deliverables |
-| --- | --- | --- |
-| 0 — Bootstrap | Monorepo | pnpm workspaces, shared types, Worker + Next.js shells, CI typecheck |
-| 1 — Parser | Wasm DDL classifier | Rust `sql_guard`, hazard labels, 25 fixtures |
-| 2 — Data plane | Edge persistence | D1 schema, sessions, `POST /api/parse`, CORS |
-| 3 — RAG + agent | Grounded drafts | 15 runbooks, hybrid search, citation check, LangGraph, streaming |
-| 4 — Product | Real-time UX | Durable Object WebSocket, Next.js chat UI, context rail, GitHub Action |
-| 5 — Deploy | Public demo | Worker on Cloudflare, web on Vercel, OpenAI secret on Worker |
-
----
-
-## Features
-
-- Real-time token streaming over WebSocket (reviews and chat)
-- Persistent review sessions in D1; `GET /api/sessions/:id`
-- Hybrid runbook retrieval (keyword + vectors + RRF)
-- Rust Wasm Postgres DDL classification
-- Citation gate — drops hallucinated sentences
-- Optional user context on SQL reviews
-- OpenTelemetry-style span footer on completed reviews
-- Mock/demo mode without OpenAI (local embedder + mock drafter)
-- Mobile-friendly layout with collapsible context sidebar
-- PR helper: GitHub Action posts parser JSON via `/api/parse`
-
----
-
-## Installation and deployment
-
-### Prerequisites
-
-- Node.js ≥ 20, pnpm 11
-- Cloudflare account (D1, Durable Objects; Vectorize optional)
-- OpenAI API key (recommended for live chat + drafts on the Worker)
-- Rust + `wasm-pack` only if you change `packages/sql_guard`
-
-### Quick start (live site)
-
-No install required: **[https://lockstep-eta.vercel.app/](https://lockstep-eta.vercel.app/)**
-
-### Local development
-
-```bash
-git clone https://github.com/s4natk/lockstep.git
-cd lockstep
-pnpm install
-pnpm dev:worker   # http://localhost:8787
-pnpm dev:web      # http://localhost:3000
-```
-
-Optional: `apps/web/.env.local` with `NEXT_PUBLIC_WORKER_URL=http://localhost:8787`.
-
-Local OpenAI: `apps/worker/.dev.vars` with `OPENAI_API_KEY=sk-...` (do not commit), or `pnpm exec wrangler secret put OPENAI_API_KEY` for remote.
-
-### Deploy your own instance
-
-1. **D1:** `pnpm exec wrangler d1 create lockstep` → set `database_id` in `apps/worker/wrangler.toml` → `pnpm exec wrangler d1 execute lockstep --remote --file=schema.sql`
-2. **Secret:** `cd apps/worker && pnpm exec wrangler secret put OPENAI_API_KEY`
-3. **Worker:** `pnpm exec wrangler deploy` → copy the `workers.dev` URL
-4. **Vercel:** Root directory `apps/web`, env `NEXT_PUBLIC_WORKER_URL=https://lockstep.<subdomain>.workers.dev`, redeploy after any env change
-5. **CORS (optional):** Add your Vercel origin to `apps/worker/src/index.ts` if the browser should call `/health` or `/api/parse` from production
-
----
-
-## API reference
-
-### `GET /health`
-
-```json
-{
-  "ok": true,
-  "timestamp": "2026-10-10T21:11:12.908Z",
-  "openai": {
-    "configured": true,
-    "chatModel": "gpt-4.1-mini",
-    "mode": "live"
-  }
-}
-```
-
-`mode` is `mock` when `OPENAI_API_KEY` is not set on the Worker.
-
-### `POST /api/parse`
-
-Request:
-
-```json
-{"sql": "DROP TABLE sessions"}
-```
-
-Response: `ParseResult` with `statements` and `hazards` (see `packages/shared`).
-
-### `GET /api/sessions/:id`
-
-Returns stored session row or `404`.
-
-### WebSocket `WS /agent/connect/:sessionId`
-
-**Client → server** (chat or SQL in one field):
-
-```json
-{
-  "type": "message",
-  "text": "DROP TABLE sessions;",
-  "context": ["Require a backup before this drop."]
-}
-```
-
-Legacy shape still works: `{ "type": "review", "sql": "..." }`.
-
-**Server → client** (review path):
-
-```json
-{"type": "intent", "intent": "review", "sessionId": "..."}
-{"type": "parse", "sessionId": "...", "result": {}}
-{"type": "token", "content": "..."}
-{"type": "done", "sessionId": "...", "intent": "review", "note": "...", "citations": [], "dropped": [], "trace": {"spans": []}}
-```
-
-**Server → client** (chat path):
-
-```json
-{"type": "intent", "intent": "chat", "sessionId": "..."}
-{"type": "token", "content": "Hi! "}
-{"type": "done", "sessionId": "...", "intent": "chat", "reply": "..."}
-```
-
-Errors: `{ "type": "error", "error": "..." }`.
-
----
-
-## Project structure
-
-```text
-lockstep/
-├── apps/
-│   ├── worker/                 # Hono, Durable Object, LangGraph, D1
-│   │   ├── src/
-│   │   │   ├── index.ts
-│   │   │   ├── reviewSession.ts
-│   │   │   ├── reviewGraph.ts
-│   │   │   ├── assistantChat.ts
-│   │   │   ├── hybridSearch.ts
-│   │   │   ├── citationCheck.ts
-│   │   │   ├── parser.ts
-│   │   │   └── ...
-│   │   ├── schema.sql
-│   │   └── wrangler.toml
-│   └── web/                    # Next.js chat UI
-│       └── src/
-│           ├── app/
-│           ├── components/
-│           └── lib/
-├── packages/
-│   ├── sql_guard/              # Rust DDL → Wasm
-│   └── shared/                 # Hazards, citations, runbooks
-├── eval/
-│   ├── migrations/             # 25 labeled SQL fixtures
-│   └── runbooks/               # 15 chunks + questions.json
-├── action.yml                  # PR comment from POST /api/parse
-└── pnpm-workspace.yaml
-```
-
----
-
-## Technical highlights
-
-### Durable Objects for streaming reviews
-
-`ReviewSession` holds the WebSocket, emits parser JSON before tokens, runs LangGraph, and writes the finished note to D1.
-
-### Rust Wasm parser
-
-Statement splitting, byte spans, and hazard codes without round-trips to a parser service.
-
-### Hybrid RAG at the edge
-
-Keyword search over bundled chunks plus embedding similarity; RRF merge; Vectorize when available.
-
-### Citation enforcement
-
-Sentences must include a quote grounded in parser output, a retrieved chunk, or user context — reducing unsafe rollout advice.
-
-### SSE → WebSocket bridge
-
-OpenAI streaming chat completions are parsed line-by-line and re-emitted as WebSocket `token` events.
-
----
+The export command does not read `.dev.vars`; set `OPENAI_API_KEY` in the invoking
+environment. It refuses hash embeddings and will not overwrite an existing output
+file. Keep the `VECTORIZE` binding and exported IDs aligned with the bundled corpus.
+Redeploy the Worker after adding the binding so it becomes active remotely.
+No remote deployment, paid provider call, or Cloudflare provisioning is performed
+by the test suite.
+
+## Limitations
+
+No live model or production infrastructure was verified for this release. Provider
+behavior is covered with controlled responses, and local Wrangler exercises actual
+WASM, Durable Objects, and D1. The curated corpus is small; arbitrary errors may need
+additional code, runtime context, documentation, and human judgment. SQL hazards are
+recognized patterns rather than an exhaustive safety guarantee. Parser byte offsets
+are translated for Unicode source provenance.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
-
----
-
-## Troubleshooting
-
-| Issue | Fix |
-| --- | --- |
-| **Worker offline on Vercel** | Set `NEXT_PUBLIC_WORKER_URL` to your `https://…workers.dev` URL and redeploy `apps/web`. |
-| **WebSocket failed** | Worker must be deployed; URL must use `https` (browser uses `wss`). |
-| **Demo mode / mock replies** | Run `/health`; if `openai.configured` is false, set `wrangler secret put OPENAI_API_KEY` and redeploy. |
-| **Vectorize warnings locally** | Expected in `wrangler dev`; hybrid search falls back to in-memory vectors. |
-| **D1 table missing** | `wrangler d1 execute lockstep --remote --file=schema.sql` |
-| **Wasm errors** | Rebuild: `cd packages/sql_guard && wasm-pack build --target web --release` |
-
-**Local fallback:** `pnpm dev:worker` + `pnpm dev:web` → [http://localhost:3000](http://localhost:3000).
+MIT. The original project's license and useful SQL infrastructure are retained.

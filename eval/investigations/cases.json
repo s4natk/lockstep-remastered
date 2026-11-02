@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "description": "Labeled local deterministic investigations. Terms are diagnostic expectations, not a measure of live model reasoning quality.",
+  "cases": [
+    {
+      "id": "python-none",
+      "input": "Traceback (most recent call last):\n  File \"users.py\", line 19, in user_id\n    return user[\"id\"]\nTypeError: 'NoneType' object is not subscriptable",
+      "expectedCategory": "runtime_exception",
+      "expectedFindingCodes": ["runtime.error", "runtime.stack_frames"],
+      "relevantSourceIds": ["runbook:runtime-null"],
+      "acceptableExplanationTerms": ["TypeError", "NoneType"],
+      "unsupportedConclusions": ["root cause is confirmed", "database corruption is confirmed"],
+      "expectedGuidanceTerms": ["stack frame", "regression"]
+    },
+    {
+      "id": "javascript-undefined",
+      "input": "TypeError: Cannot read properties of undefined (reading 'id')\n    at loadUser (src/users.ts:27:12)",
+      "expectedCategory": "runtime_exception",
+      "expectedFindingCodes": ["runtime.error", "runtime.stack_frames"],
+      "relevantSourceIds": ["runbook:runtime-null"],
+      "acceptableExplanationTerms": ["TypeError", "undefined"],
+      "unsupportedConclusions": ["root cause is confirmed", "the API definitely returned null"],
+      "expectedGuidanceTerms": ["stack frame", "regression"]
+    },
+    {
+      "id": "java-null",
+      "input": "Exception in thread \"main\" java.lang.NullPointerException: user is null\n    at com.example.Users.load(Users.java:42)",
+      "expectedCategory": "runtime_exception",
+      "expectedFindingCodes": ["runtime.error", "runtime.stack_frames"],
+      "relevantSourceIds": ["runbook:runtime-null"],
+      "acceptableExplanationTerms": ["NullPointerException", "null"],
+      "unsupportedConclusions": ["root cause is confirmed", "the JVM is defective"],
+      "expectedGuidanceTerms": ["stack frame", "runtime"]
+    },
+    {
+      "id": "rust-panic",
+      "input": "thread 'main' panicked at src/main.rs:14:5:\ncalled `Option::unwrap()` on a `None` value",
+      "expectedCategory": "runtime_exception",
+      "expectedFindingCodes": ["runtime.error", "runtime.stack_frames"],
+      "relevantSourceIds": [],
+      "acceptableExplanationTerms": ["panicked"],
+      "unsupportedConclusions": ["root cause is confirmed", "memory corruption is confirmed"],
+      "expectedGuidanceTerms": ["operation", "reproduction"]
+    },
+    {
+      "id": "pytest-assertion",
+      "input": "FAILED tests/test_total.py::test_total - AssertionError\nE   assert 4 == 5",
+      "expectedCategory": "test_failure",
+      "expectedFindingCodes": ["test.failure", "test.assertion"],
+      "relevantSourceIds": ["runbook:test-assertion"],
+      "acceptableExplanationTerms": ["AssertionError"],
+      "unsupportedConclusions": ["the expectation is definitely wrong", "root cause is confirmed"],
+      "expectedGuidanceTerms": ["fixture", "single failing test"]
+    },
+    {
+      "id": "vitest-mismatch",
+      "input": "FAIL src/total.test.ts > sums prices\nExpected: 5\nReceived: 4\nTests: 1 failed, 1 total",
+      "expectedCategory": "test_failure",
+      "expectedFindingCodes": ["test.failure", "test.assertion"],
+      "relevantSourceIds": ["runbook:test-assertion"],
+      "acceptableExplanationTerms": ["FAIL"],
+      "unsupportedConclusions": ["update every snapshot", "root cause is confirmed"],
+      "expectedGuidanceTerms": ["expected", "suite"]
+    },
+    {
+      "id": "http-400",
+      "input": "HTTP/1.1 400 Bad Request\n{\"status\":400,\"message\":\"Invalid payload schema\"}",
+      "expectedCategory": "http_error",
+      "expectedFindingCodes": ["http.status", "http.message"],
+      "relevantSourceIds": ["runbook:http-client"],
+      "acceptableExplanationTerms": ["Invalid payload schema"],
+      "unsupportedConclusions": ["the server implementation is definitely broken"],
+      "expectedGuidanceTerms": ["payload", "minimal"]
+    },
+    {
+      "id": "http-401",
+      "input": "{\"status\":401,\"error\":{\"message\":\"Missing authentication token\"},\"method\":\"GET\"}",
+      "expectedCategory": "http_error",
+      "expectedFindingCodes": ["http.status", "http.message"],
+      "relevantSourceIds": ["runbook:http-auth"],
+      "acceptableExplanationTerms": ["Missing authentication token"],
+      "unsupportedConclusions": ["the token was definitely stolen", "root cause is confirmed"],
+      "expectedGuidanceTerms": ["authentication", "status"]
+    },
+    {
+      "id": "http-403",
+      "input": "HTTP 403 Forbidden\nGET /v1/admin 403",
+      "expectedCategory": "http_error",
+      "expectedFindingCodes": ["http.status"],
+      "relevantSourceIds": ["runbook:http-auth"],
+      "acceptableExplanationTerms": ["403"],
+      "unsupportedConclusions": ["disable authorization", "root cause is confirmed"],
+      "expectedGuidanceTerms": ["scopes", "request"]
+    },
+    {
+      "id": "http-404",
+      "input": "GET /v1/missing-resource 404 Not Found",
+      "expectedCategory": "http_error",
+      "expectedFindingCodes": ["http.status"],
+      "relevantSourceIds": ["runbook:http-client"],
+      "acceptableExplanationTerms": ["404"],
+      "unsupportedConclusions": ["the database row was definitely deleted"],
+      "expectedGuidanceTerms": ["endpoint", "expected status"]
+    },
+    {
+      "id": "http-429",
+      "input": "HTTP/1.1 429 Too Many Requests\nRetry-After: 30",
+      "expectedCategory": "http_error",
+      "expectedFindingCodes": ["http.status", "http.retry_after"],
+      "relevantSourceIds": ["runbook:http-rate"],
+      "acceptableExplanationTerms": ["429"],
+      "unsupportedConclusions": ["retry immediately without limits", "root cause is confirmed"],
+      "expectedGuidanceTerms": ["Retry-After", "concurrency"]
+    },
+    {
+      "id": "http-500",
+      "input": "HTTP 500 Internal Server Error\nPOST /v1/users 500",
+      "expectedCategory": "http_error",
+      "expectedFindingCodes": ["http.status"],
+      "relevantSourceIds": ["runbook:http-server"],
+      "acceptableExplanationTerms": ["500"],
+      "unsupportedConclusions": ["database outage is confirmed", "root cause is confirmed"],
+      "expectedGuidanceTerms": ["server logs", "suspected fix"]
+    },
+    {
+      "id": "connection-refused",
+      "input": "request failed: ECONNREFUSED upstream.internal:8080",
+      "expectedCategory": "http_error",
+      "expectedFindingCodes": ["http.connection"],
+      "relevantSourceIds": ["runbook:network-timeout"],
+      "acceptableExplanationTerms": ["ECONNREFUSED"],
+      "unsupportedConclusions": ["the firewall is definitely responsible"],
+      "expectedGuidanceTerms": ["endpoint", "same environment"]
+    },
+    {
+      "id": "structured-log",
+      "input": "{\"level\":\"info\",\"message\":\"request started\",\"requestId\":\"fixture-request\"}\n{\"level\":\"error\",\"message\":\"upstream connection pool exhausted\",\"requestId\":\"fixture-request\"}",
+      "expectedCategory": "application_log",
+      "expectedFindingCodes": ["log.error_event"],
+      "relevantSourceIds": ["runbook:log-correlation"],
+      "acceptableExplanationTerms": ["pool exhausted"],
+      "unsupportedConclusions": ["a memory leak is confirmed", "root cause is confirmed"],
+      "expectedGuidanceTerms": ["timestamps", "same workload"]
+    },
+    {
+      "id": "timestamp-log",
+      "input": "2026-10-31T12:00:00Z INFO service started\n2026-10-31T12:00:01Z ERROR upstream timeout\n2026-10-31T12:00:02Z WARN request abandoned",
+      "expectedCategory": "application_log",
+      "expectedFindingCodes": ["log.error_event"],
+      "relevantSourceIds": ["runbook:log-correlation", "runbook:network-timeout"],
+      "acceptableExplanationTerms": ["upstream timeout"],
+      "unsupportedConclusions": ["increase the timeout guarantees a fix"],
+      "expectedGuidanceTerms": ["surrounding events", "dependency"]
+    },
+    {
+      "id": "postgres-unique",
+      "input": "ERROR: duplicate key value violates unique constraint \"users_email_key\"\nDETAIL: Key (email)=(fixture@example.test) already exists.\nSQLSTATE: 23505",
+      "expectedCategory": "database_error",
+      "expectedFindingCodes": ["database.error", "database.sqlstate"],
+      "relevantSourceIds": ["runbook:database-constraint"],
+      "acceptableExplanationTerms": ["duplicate key", "unique constraint"],
+      "unsupportedConclusions": ["disable all constraints", "the database is corrupted"],
+      "expectedGuidanceTerms": ["read-only", "safe fixture"]
+    },
+    {
+      "id": "postgres-schema",
+      "input": "ERROR: relation users does not exist\nSQLSTATE: 42P01",
+      "expectedCategory": "database_error",
+      "expectedFindingCodes": ["database.error", "database.sqlstate"],
+      "relevantSourceIds": ["runbook:database-schema"],
+      "acceptableExplanationTerms": ["relation users does not exist"],
+      "unsupportedConclusions": ["the migration definitely failed", "drop the production database"],
+      "expectedGuidanceTerms": ["migration version", "test database"]
+    },
+    {
+      "id": "unknown-text",
+      "input": "The application feels different after the last change.",
+      "expectedCategory": "unknown",
+      "expectedFindingCodes": [],
+      "relevantSourceIds": [],
+      "acceptableExplanationTerms": ["does not identify a recognizable failure"],
+      "unsupportedConclusions": ["root cause is confirmed", "out of memory"],
+      "expectedGuidanceTerms": ["exact error", "reproducible"]
+    },
+    {
+      "id": "sql-migration-normalization",
+      "input": "ALTER TABLE users DROP COLUMN email;",
+      "expectedCategory": "sql_migration",
+      "expectedFindingCodes": [],
+      "relevantSourceIds": [],
+      "acceptableExplanationTerms": [],
+      "unsupportedConclusions": ["this migration is safe"],
+      "expectedGuidanceTerms": [],
+      "normalizationOnly": true
+    },
+    {
+      "id": "empty-input-rejected",
+      "input": "  \n  ",
+      "expectedCategory": "unknown",
+      "expectedFindingCodes": [],
+      "relevantSourceIds": [],
+      "acceptableExplanationTerms": [],
+      "unsupportedConclusions": [],
+      "expectedGuidanceTerms": [],
+      "expectValidationError": true
+    }
+  ]
+}

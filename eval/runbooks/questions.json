@@ -1,34 +1,85 @@
 [
   { "query": "How do I build an index without locking writes?", "chunkId": "concurrent-index" },
   { "query": "Can I create an index while the app keeps writing?", "chunkId": "concurrent-index" },
-  { "query": "Why can't CREATE INDEX CONCURRENTLY run inside a transaction?", "chunkId": "concurrent-index" },
-  { "query": "Does a concurrent index build take longer than a normal one?", "chunkId": "concurrent-index" },
-  { "query": "How do I avoid blocking inserts while adding an index?", "chunkId": "concurrent-index" },
-  { "query": "What command builds a Postgres index without an exclusive write lock?", "chunkId": "concurrent-index" },
-  { "query": "Is CREATE INDEX CONCURRENTLY allowed in a BEGIN block?", "chunkId": "concurrent-index" },
+  {
+    "query": "Why can't CREATE INDEX CONCURRENTLY run inside a transaction?",
+    "chunkId": "concurrent-index"
+  },
+  {
+    "query": "Does a concurrent index build take longer than a normal one?",
+    "chunkId": "concurrent-index"
+  },
+  {
+    "query": "How do I avoid blocking inserts while adding an index?",
+    "chunkId": "concurrent-index"
+  },
+  {
+    "query": "What command builds a Postgres index without an exclusive write lock?",
+    "chunkId": "concurrent-index"
+  },
+  {
+    "query": "Is CREATE INDEX CONCURRENTLY allowed in a BEGIN block?",
+    "chunkId": "concurrent-index"
+  },
 
-  { "query": "What happens if I add a NOT NULL column without a default?", "chunkId": "add-not-null" },
+  {
+    "query": "What happens if I add a NOT NULL column without a default?",
+    "chunkId": "add-not-null"
+  },
   { "query": "Will ADD COLUMN text NOT NULL rewrite the table?", "chunkId": "add-not-null" },
-  { "query": "Why does a new required column lock the table exclusively?", "chunkId": "add-not-null" },
-  { "query": "Existing rows have no value for a new NOT NULL column. What does Postgres do?", "chunkId": "add-not-null" },
-  { "query": "Is adding a non-null column with no default a table rewrite?", "chunkId": "add-not-null" },
-  { "query": "Does ALTER TABLE ADD COLUMN bio text NOT NULL copy every row?", "chunkId": "add-not-null" },
-  { "query": "What lock do I take when the new column cannot be null and has no default?", "chunkId": "add-not-null" },
+  {
+    "query": "Why does a new required column lock the table exclusively?",
+    "chunkId": "add-not-null"
+  },
+  {
+    "query": "Existing rows have no value for a new NOT NULL column. What does Postgres do?",
+    "chunkId": "add-not-null"
+  },
+  {
+    "query": "Is adding a non-null column with no default a table rewrite?",
+    "chunkId": "add-not-null"
+  },
+  {
+    "query": "Does ALTER TABLE ADD COLUMN bio text NOT NULL copy every row?",
+    "chunkId": "add-not-null"
+  },
+  {
+    "query": "What lock do I take when the new column cannot be null and has no default?",
+    "chunkId": "add-not-null"
+  },
 
   { "query": "Does SET NOT NULL scan existing rows?", "chunkId": "set-not-null" },
-  { "query": "How does Postgres prove a column has no nulls before SET NOT NULL?", "chunkId": "set-not-null" },
+  {
+    "query": "How does Postgres prove a column has no nulls before SET NOT NULL?",
+    "chunkId": "set-not-null"
+  },
   { "query": "Will SET NOT NULL block writes until the scan finishes?", "chunkId": "set-not-null" },
-  { "query": "Should I add a check constraint before SET NOT NULL on a large table?", "chunkId": "set-not-null" },
+  {
+    "query": "Should I add a check constraint before SET NOT NULL on a large table?",
+    "chunkId": "set-not-null"
+  },
   { "query": "What lock does a SET NOT NULL validation scan take?", "chunkId": "set-not-null" },
-  { "query": "How do I make a nullable column required without a surprise full scan?", "chunkId": "set-not-null" },
+  {
+    "query": "How do I make a nullable column required without a surprise full scan?",
+    "chunkId": "set-not-null"
+  },
 
   { "query": "What does DROP COLUMN do to stored values?", "chunkId": "drop-column" },
   { "query": "After I drop a column, can new reads still see it?", "chunkId": "drop-column" },
   { "query": "When is disk space from a dropped column reclaimed?", "chunkId": "drop-column" },
-  { "query": "Does DROP COLUMN delete the values stored in that column?", "chunkId": "drop-column" },
-  { "query": "Do I need vacuum after dropping a column to get the space back?", "chunkId": "drop-column" },
+  {
+    "query": "Does DROP COLUMN delete the values stored in that column?",
+    "chunkId": "drop-column"
+  },
+  {
+    "query": "Do I need vacuum after dropping a column to get the space back?",
+    "chunkId": "drop-column"
+  },
   { "query": "Is dropping a column immediate data loss for that field?", "chunkId": "drop-column" },
-  { "query": "What happens to historical values when a column is removed?", "chunkId": "drop-column" },
+  {
+    "query": "What happens to historical values when a column is removed?",
+    "chunkId": "drop-column"
+  },
 
   { "query": "What does DROP TABLE delete?", "chunkId": "drop-table" },
   { "query": "Does dropping a table remove its rows?", "chunkId": "drop-table" },
@@ -47,70 +98,166 @@
 
   { "query": "When does ALTER COLUMN TYPE rewrite the table?", "chunkId": "alter-type" },
   { "query": "Does changing a column type copy every row?", "chunkId": "alter-type" },
-  { "query": "What happens if the new column type is not binary compatible?", "chunkId": "alter-type" },
+  {
+    "query": "What happens if the new column type is not binary compatible?",
+    "chunkId": "alter-type"
+  },
   { "query": "Does an incompatible type change take an exclusive lock?", "chunkId": "alter-type" },
   { "query": "Will ALTER COLUMN age TYPE bigint rewrite users?", "chunkId": "alter-type" },
-  { "query": "When is a column type change metadata-only versus a full rewrite?", "chunkId": "alter-type" },
+  {
+    "query": "When is a column type change metadata-only versus a full rewrite?",
+    "chunkId": "alter-type"
+  },
   { "query": "Does a binary-incompatible type cast rewrite the heap?", "chunkId": "alter-type" },
 
   { "query": "Is a constant DEFAULT metadata-only?", "chunkId": "constant-default" },
-  { "query": "On Postgres 11, does ADD COLUMN with a constant default rewrite rows?", "chunkId": "constant-default" },
+  {
+    "query": "On Postgres 11, does ADD COLUMN with a constant default rewrite rows?",
+    "chunkId": "constant-default"
+  },
   { "query": "Where is a constant column default stored?", "chunkId": "constant-default" },
-  { "query": "Are existing rows rewritten when I add a column with DEFAULT ''?", "chunkId": "constant-default" },
-  { "query": "Is ADD COLUMN created_at timestamptz DEFAULT now() a table rewrite?", "chunkId": "constant-default" },
-  { "query": "Since which Postgres version is a constant default metadata-only?", "chunkId": "constant-default" },
-  { "query": "If the default is a constant, are old rows left untouched?", "chunkId": "constant-default" },
+  {
+    "query": "Are existing rows rewritten when I add a column with DEFAULT ''?",
+    "chunkId": "constant-default"
+  },
+  {
+    "query": "Is ADD COLUMN created_at timestamptz DEFAULT now() a table rewrite?",
+    "chunkId": "constant-default"
+  },
+  {
+    "query": "Since which Postgres version is a constant default metadata-only?",
+    "chunkId": "constant-default"
+  },
+  {
+    "query": "If the default is a constant, are old rows left untouched?",
+    "chunkId": "constant-default"
+  },
 
   { "query": "Does ADD COLUMN PRIMARY KEY lock writes?", "chunkId": "primary-key" },
   { "query": "What does adding a primary key column build?", "chunkId": "primary-key" },
   { "query": "Must a new primary key column be unique and not null?", "chunkId": "primary-key" },
-  { "query": "Will ADD COLUMN id bigint PRIMARY KEY block writes while the index builds?", "chunkId": "primary-key" },
-  { "query": "What has to be true before a primary key constraint validates?", "chunkId": "primary-key" },
+  {
+    "query": "Will ADD COLUMN id bigint PRIMARY KEY block writes while the index builds?",
+    "chunkId": "primary-key"
+  },
+  {
+    "query": "What has to be true before a primary key constraint validates?",
+    "chunkId": "primary-key"
+  },
   { "query": "Does a new primary key take a write lock?", "chunkId": "primary-key" },
-  { "query": "Adding a primary key column builds an index. Does that block writers?", "chunkId": "primary-key" },
+  {
+    "query": "Adding a primary key column builds an index. Does that block writers?",
+    "chunkId": "primary-key"
+  },
 
   { "query": "Does CREATE UNIQUE INDEX lock writes?", "chunkId": "unique-index" },
   { "query": "How do I create a unique index without locking writes?", "chunkId": "unique-index" },
-  { "query": "Will a unique index fail if duplicate keys already exist?", "chunkId": "unique-index" },
-  { "query": "Does CREATE UNIQUE INDEX reject duplicates stored in the table?", "chunkId": "unique-index" },
-  { "query": "Can I build a unique index concurrently to avoid blocking writes?", "chunkId": "unique-index" },
-  { "query": "What happens when I add a unique index and the column already has dupes?", "chunkId": "unique-index" },
+  {
+    "query": "Will a unique index fail if duplicate keys already exist?",
+    "chunkId": "unique-index"
+  },
+  {
+    "query": "Does CREATE UNIQUE INDEX reject duplicates stored in the table?",
+    "chunkId": "unique-index"
+  },
+  {
+    "query": "Can I build a unique index concurrently to avoid blocking writes?",
+    "chunkId": "unique-index"
+  },
+  {
+    "query": "What happens when I add a unique index and the column already has dupes?",
+    "chunkId": "unique-index"
+  },
   { "query": "Is a non-concurrent unique index a write lock?", "chunkId": "unique-index" },
 
   { "query": "Is a nullable column add metadata-only?", "chunkId": "nullable-add" },
   { "query": "Does adding a nullable column rewrite existing rows?", "chunkId": "nullable-add" },
-  { "query": "What does Postgres update when the new column allows null?", "chunkId": "nullable-add" },
-  { "query": "Is ALTER TABLE ADD COLUMN bio text a catalog-only change?", "chunkId": "nullable-add" },
+  {
+    "query": "What does Postgres update when the new column allows null?",
+    "chunkId": "nullable-add"
+  },
+  {
+    "query": "Is ALTER TABLE ADD COLUMN bio text a catalog-only change?",
+    "chunkId": "nullable-add"
+  },
   { "query": "Will a nullable add copy the table?", "chunkId": "nullable-add" },
   { "query": "Is adding an optional column safe from a rewrite?", "chunkId": "nullable-add" },
 
   { "query": "What does DROP COLUMN IF EXISTS do?", "chunkId": "drop-if-exists" },
-  { "query": "Does DROP COLUMN IF EXISTS skip the drop when the column is already gone?", "chunkId": "drop-if-exists" },
-  { "query": "Is DROP COLUMN IF EXISTS still data loss if the column exists?", "chunkId": "drop-if-exists" },
-  { "query": "Will IF EXISTS make a column drop harmless when the column is present?", "chunkId": "drop-if-exists" },
-  { "query": "What happens if I drop a column if exists and it is still there?", "chunkId": "drop-if-exists" },
-  { "query": "Does IF EXISTS only skip a column drop when the column is missing?", "chunkId": "drop-if-exists" },
+  {
+    "query": "Does DROP COLUMN IF EXISTS skip the drop when the column is already gone?",
+    "chunkId": "drop-if-exists"
+  },
+  {
+    "query": "Is DROP COLUMN IF EXISTS still data loss if the column exists?",
+    "chunkId": "drop-if-exists"
+  },
+  {
+    "query": "Will IF EXISTS make a column drop harmless when the column is present?",
+    "chunkId": "drop-if-exists"
+  },
+  {
+    "query": "What happens if I drop a column if exists and it is still there?",
+    "chunkId": "drop-if-exists"
+  },
+  {
+    "query": "Does IF EXISTS only skip a column drop when the column is missing?",
+    "chunkId": "drop-if-exists"
+  },
 
   { "query": "What is a USING expression for?", "chunkId": "type-using" },
-  { "query": "How do I tell ALTER COLUMN TYPE how to convert each value?", "chunkId": "type-using" },
+  {
+    "query": "How do I tell ALTER COLUMN TYPE how to convert each value?",
+    "chunkId": "type-using"
+  },
   { "query": "Does a USING cast still rewrite the table?", "chunkId": "type-using" },
   { "query": "When types differ, does USING avoid a rewrite?", "chunkId": "type-using" },
   { "query": "What clause converts values during a column type change?", "chunkId": "type-using" },
-  { "query": "Is ALTER COLUMN TYPE ... USING still a full table rewrite?", "chunkId": "type-using" },
+  {
+    "query": "Is ALTER COLUMN TYPE ... USING still a full table rewrite?",
+    "chunkId": "type-using"
+  },
   { "query": "What does the USING clause do during a type conversion?", "chunkId": "type-using" },
 
   { "query": "Why set lock_timeout before DDL?", "chunkId": "lock-timeout" },
-  { "query": "How do I make a blocked migration fail instead of waiting forever?", "chunkId": "lock-timeout" },
-  { "query": "Should I pair lock_timeout with statement_timeout on long rewrites?", "chunkId": "lock-timeout" },
-  { "query": "What setting stops DDL from queueing behind a lock forever?", "chunkId": "lock-timeout" },
-  { "query": "How do I bound a migration that might wait on an exclusive lock?", "chunkId": "lock-timeout" },
+  {
+    "query": "How do I make a blocked migration fail instead of waiting forever?",
+    "chunkId": "lock-timeout"
+  },
+  {
+    "query": "Should I pair lock_timeout with statement_timeout on long rewrites?",
+    "chunkId": "lock-timeout"
+  },
+  {
+    "query": "What setting stops DDL from queueing behind a lock forever?",
+    "chunkId": "lock-timeout"
+  },
+  {
+    "query": "How do I bound a migration that might wait on an exclusive lock?",
+    "chunkId": "lock-timeout"
+  },
   { "query": "Which timeout should I set before a risky ALTER TABLE?", "chunkId": "lock-timeout" },
-  { "query": "What timeout covers a long table rewrite after lock_timeout?", "chunkId": "lock-timeout" },
+  {
+    "query": "What timeout covers a long table rewrite after lock_timeout?",
+    "chunkId": "lock-timeout"
+  },
 
   { "query": "What is expand and contract?", "chunkId": "expand-contract" },
   { "query": "How should I ship an incompatible schema change?", "chunkId": "expand-contract" },
-  { "query": "Should I add the new column, backfill, switch readers, then drop the old one?", "chunkId": "expand-contract" },
-  { "query": "What migration pattern avoids dropping a column in the same deploy as the rewrite?", "chunkId": "expand-contract" },
-  { "query": "How do I expand the schema before I contract the old shape?", "chunkId": "expand-contract" },
-  { "query": "When should a destructive column drop happen in a later migration?", "chunkId": "expand-contract" }
+  {
+    "query": "Should I add the new column, backfill, switch readers, then drop the old one?",
+    "chunkId": "expand-contract"
+  },
+  {
+    "query": "What migration pattern avoids dropping a column in the same deploy as the rewrite?",
+    "chunkId": "expand-contract"
+  },
+  {
+    "query": "How do I expand the schema before I contract the old shape?",
+    "chunkId": "expand-contract"
+  },
+  {
+    "query": "When should a destructive column drop happen in a later migration?",
+    "chunkId": "expand-contract"
+  }
 ]
