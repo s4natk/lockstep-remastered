@@ -1,14 +1,24 @@
 # sql_guard
 
-Postgres DDL hazard classifier. Hazard labels come from this crate.
+PostgreSQL DDL parsing and deterministic hazard classification using `sqlparser`.
+The Worker runs the checked-in WebAssembly binding; submitted SQL is never executed.
 
-## Wasm
+The classifier reports recognized `data_loss`, `lock_risk`, and `rewrite` patterns.
+A migration with no recognized hazards is not guaranteed safe. Table size, PostgreSQL
+version, extensions, lock contention, and live schema state are outside its input.
 
-The `wasm32-unknown-unknown` build exports `parse_migration`. It returns JSON with `statements` and `hazards`, using camelCase fields and snake_case codes (`data_loss`, `lock_risk`, `rewrite`).
+Statements and hazards retain byte spans in the original SQL. JavaScript consumers
+must translate UTF-8 byte spans before calculating source lines or editor positions.
 
-```text
+## Build and test
+
+```sh
+cargo test --locked
 rustup target add wasm32-unknown-unknown
 wasm-pack build --target web --release
 ```
 
-The release profile uses `opt-level = "s"` and link-time optimization so the Worker bundle stays small. `sqlparser` is built with `default-features = false` and the `std` feature only. Dialect selection is `PostgreSqlDialect` in code. The crate does not ship a Postgres-only feature flag.
+The WASM export `parse_migration` returns JSON with camelCase properties and
+snake_case hazard codes. Keep `pkg/` bindings and the binary together when rebuilding.
+The release profile optimizes for size with link-time optimization. PostgreSQL dialect
+selection is explicit; this crate does not ship a PostgreSQL-only feature flag.

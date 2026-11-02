@@ -9,7 +9,7 @@ use crate::{split_statements, ParseError, ParsedStatement};
 
 /// A hazard the parser can prove from the statement AST.
 ///
-/// A statement that is not listed here is safe, and it does not appear in [`ParseResult::hazards`].
+/// Unrecognized statements have no reported hazard. This is not proof that a migration is safe.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HazardCode {
