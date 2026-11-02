@@ -1,108 +1,196 @@
 # Deployment
 
-Lockstep uses a Cloudflare Worker with D1 and the retained SQL Durable Object, plus
-a Next.js frontend. This guide describes how to provision and verify a deployment;
-a repository push or a successful local build does not deploy either service.
+Lockstep runs as two services: a Cloudflare Worker backed by D1, and a Next.js
+frontend. This guide uses Vercel for the frontend. A repository push does not deploy
+the Worker; provision and deploy each service before testing the public application.
 
-## Local provider setup before deployment
+## Prerequisites
 
-Follow [the local OpenAI setup](../README.md#enable-openai-responses-locally) to create
-an application API key, create the ignored `apps/worker/.dev.vars` only if missing,
-and restart the Worker after editing it. Keep any existing file and its other settings.
-The `.dev.vars.example` template is public; the real file and key remain private.
+- Node.js 24 or later and pnpm 11.9.0.
+- Cloudflare and Vercel accounts with access to the deployment repository.
+- An OpenAI API key for model-generated responses. Deterministic guidance works
+  without a provider key. Vectorize is optional.
 
-Use a non-sensitive sample to check an actual AI-mode response before configuring
-production. The **AI configured** badge and `/health` report configuration presence,
-not provider authentication or model availability. OpenAI documents
-[server-side key handling](https://developers.openai.com/api/reference/overview#authentication).
+Run terminal commands from the repository root. On Windows PowerShell, use
+`pnpm.cmd` wherever this guide shows `pnpm`.
 
-The deployment steps below configure a separate production secret. Do not copy the
-local key file into the frontend or commit it. `NEXT_PUBLIC_WORKER_URL` is public and
-must contain only the Worker URL; no browser environment variable needs the API key.
+```sh
+pnpm install --frozen-lockfile
+```
 
-## 1. Provision a separate backend
+Keep credentials out of source control. The public `.example` files describe variable
+names; real `.dev.vars` and `.env.local` files are ignored. Local provider setup is
+covered in [the README](../README.md#enable-openai-responses-locally).
 
-From the repository root, authenticate and create a new database:
+## 1. Provision the backend database
+
+Authenticate with Cloudflare and create a database for this deployment:
 
 ```sh
 pnpm --filter @lockstep/worker exec wrangler login
 pnpm --filter @lockstep/worker exec wrangler d1 create lockstep-remastered
 ```
 
-Copy the returned database ID into `apps/worker/wrangler.toml`, replacing the all-zero
-placeholder. Keep the binding name `DB`. Choose a distinct Worker/database name if
-these names already belong to another app. Do not point the demo at the original
-project's database.
+Use a different database name if that name is already in use. In
+`apps/worker/wrangler.toml`, set `database_name` and `database_id` to the values for
+this database. Preserve the `DB` binding name, because the Worker uses `env.DB`.
+A database UUID identifies the resource; it is not an API credential.
 
-Apply all migrations, including the context and conversation tables:
+Apply every pending migration:
 
 ```sh
 pnpm --filter @lockstep/worker exec wrangler d1 migrations apply DB --remote
 ```
 
-Set these optional provider values under `[vars]` in `wrangler.toml`:
+The migrations create investigation history, document storage, and conversations.
+Keep the `ReviewSession` Durable Object binding and its `v1` SQLite migration in the
+configuration. Worker deployment applies that Durable Object migration separately.
+See [Cloudflare's D1 migration reference](https://developers.cloudflare.com/d1/reference/migrations/).
+
+## 2. Deploy the Worker and configure OpenAI
+
+Deploy the backend:
+
+```sh
+pnpm --filter @lockstep/worker exec wrangler deploy
+```
+
+Record the HTTPS Worker origin printed by deployment. Examples below use
+`https://your-worker.example.workers.dev`; replace it with that actual origin.
+
+To enable OpenAI, run this command exactly as written:
+
+```sh
+pnpm --filter @lockstep/worker exec wrangler secret put OPENAI_API_KEY
+```
+
+`OPENAI_API_KEY` is the literal variable name. Paste the actual API key only when
+Wrangler prompts for the secret's value. The command publishes an updated Worker
+version. Keep the key out of `wrangler.toml`, Git, and frontend environment variables.
+The ignored local `.dev.vars` file does not configure deployed Workers.
+See [Cloudflare secrets](https://developers.cloudflare.com/workers/configuration/secrets/).
+
+Optional provider settings belong under the existing `[vars]` table in
+`apps/worker/wrangler.toml`:
 
 ```toml
+[vars]
+ALLOWED_ORIGINS = "http://localhost:3000"
 OPENAI_MODEL = "gpt-4.1-mini"
 OPENAI_BASE_URL = "https://api.openai.com/v1"
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 ```
 
-When you are ready to deploy, store the key as a Worker secret, then publish the Worker:
+These model names are the application defaults; select models available to the
+configured provider account. Run `wrangler deploy` again after changing this file.
+For a custom endpoint, follow the compatibility requirements in the README.
 
-```sh
-pnpm --filter @lockstep/worker exec wrangler secret put OPENAI_API_KEY
-pnpm --filter @lockstep/worker exec wrangler deploy
-```
+Open `https://your-worker.example.workers.dev/health`. `ok: true` confirms the Worker
+responds. `openai.configured: true` means a nonempty `OPENAI_API_KEY` is present; it
+does not verify model access, provider authentication, or available API credit.
 
-The key command accepts the value interactively. The local `.dev.vars` file does
-not configure production. Keep `OPENAI_API_KEY` out of committed configuration and
-frontend environment variables. Without a key, the deployed app uses deterministic
-guidance. Note the HTTPS Worker URL printed by deployment.
+## 3. Deploy the frontend
 
-Cloudflare documents [secrets](https://developers.cloudflare.com/workers/configuration/secrets/)
-and [Worker deployment commands](https://developers.cloudflare.com/workers/wrangler/commands/workers/).
+In Vercel, import the entire GitHub repository as a new project and use these settings:
 
-## 2. Deploy the frontend
+| Setting                                     | Value                            |
+| ------------------------------------------- | -------------------------------- |
+| Framework preset                            | Next.js                          |
+| Root Directory                              | `apps/web`                       |
+| Include source files outside Root Directory | Enabled                          |
+| Node.js version                             | `24.x`                           |
+| Install Command                             | `pnpm install --frozen-lockfile` |
+| Build Command                               | `pnpm run build`                 |
+| Output Directory                            | Framework default, `.next`       |
 
-For Vercel, import this repository as a Next.js project, set the Root Directory to
-`apps/web`, keep access to workspace source outside that directory enabled, and use
-Node.js 24. Keep the pnpm workspace and root lockfile available. Use the app's `build`
-script (`next build --webpack`) and `.next` output. The workspace dependency
-`@lockstep/shared` must be included in the build; do not upload only `apps/web`.
-See the official [monorepo setup](https://vercel.com/docs/monorepos).
+The shared workspace package lives outside `apps/web`; keep the root lockfile and
+workspace source available. The app's build script uses `next build --webpack` for
+its shared TypeScript extension aliases. No Rust rebuild is needed for deployment.
+See [Vercel's monorepo documentation](https://vercel.com/docs/monorepos/monorepo-faq).
 
-Set this environment variable before building:
+Before deploying, add these Vercel environment variables to the Production environment:
 
 ```dotenv
+ENABLE_EXPERIMENTAL_COREPACK=1
 NEXT_PUBLIC_WORKER_URL=https://your-worker.example.workers.dev
 ```
 
-Use the actual Worker URL. Keep `OPENAI_API_KEY` exclusively on the Worker; do not add
-it to the frontend host. Rebuild the frontend after changing the URL, since Next.js
-embeds public environment values at build time. A different Next.js host also works
-if it supports the application's Node.js and workspace build requirements.
+Corepack selects the repository's pinned `pnpm@11.9.0`. Add the same settings to
+Preview only if preview deployments should use this backend. `NEXT_PUBLIC_WORKER_URL`
+contains only the Worker origin, without `/health` or `/api`. Do not add the OpenAI
+key to Vercel. See [Vercel's Corepack configuration](https://vercel.com/docs/builds/configure-a-build#corepack).
 
-After obtaining the frontend's HTTPS origin, update the backend's `ALLOWED_ORIGINS`
-in `wrangler.toml` and redeploy the Worker. Use an origin with no path or trailing
-slash. Multiple explicitly allowed origins are comma-separated. The default local
-origin is insufficient for a public frontend. Deployment previews have different
-origins and need their own explicit allowance.
+Deploy and copy the stable production frontend origin, such as
+`https://your-project.vercel.app`. A preview deployment has a different origin.
 
-## 3. Check the deployed flow
+## 4. Allow the public frontend to contact the backend
 
-Open the public frontend and verify the backend status. Submit a sample error, ask
-a follow-up, add a small context document, and reload the conversation. Check that
-the Evidence drawer shows your document and the answer is labelled with its actual response mode.
-Use a private browser window to confirm it cannot see the first window's history.
-The `/health` endpoint reports whether a key is configured; it does not test model
-permissions, billing, or endpoint compatibility. A real AI-mode answer is the live
-provider smoke check.
+Open `apps/worker/wrangler.toml`. Under its existing `[vars]` table, replace or extend
+`ALLOWED_ORIGINS` with the exact production frontend origin:
+
+```toml
+[vars]
+ALLOWED_ORIGINS = "https://your-project.vercel.app"
+```
+
+Keep any other variables already in that table. Use the Vercel frontend origin here,
+not the Cloudflare backend origin. An origin includes the scheme and hostname, with
+no path. Multiple allowed origins are comma-separated:
+
+```toml
+ALLOWED_ORIGINS = "https://your-project.vercel.app,https://app.example.com"
+```
+
+Do not use `*` or a wildcard preview hostname. Each preview origin must be explicitly
+allowed if it needs access. The Worker also permits the local development origins.
+
+Publish the updated backend configuration:
+
+```sh
+pnpm --filter @lockstep/worker exec wrangler deploy
+```
+
+In Vercel, confirm `NEXT_PUBLIC_WORKER_URL` matches this Worker. If that value changes,
+redeploy the frontend: Next.js embeds public variables during the build, so updating
+the setting alone does not update an existing deployment.
+
+Commit reviewed database identifiers, origins, and other non-secret deployment
+configuration when maintaining a deployment from this repository. Keep provider
+keys in Cloudflare secrets. Non-secret variables changed only in the Cloudflare
+dashboard can be overwritten by a later configuration deployment.
+
+## 5. Verify the deployed application
+
+Open the production frontend and check the following:
+
+1. Submit a sample error. A completed **AI investigation** response verifies a live
+   provider request; **AI configured** alone does not. Deterministic guidance is
+   expected when no provider is configured or a response fails validation.
+2. Ask a follow-up, reload, and reopen the same conversation from history.
+3. Save and pin a small UTF-8 context document. Submit a related question and inspect
+   its source in the Evidence drawer.
+4. Open a private browser window and confirm it cannot see the original window's
+   conversations or context.
+
+This is a deployment smoke check. The repository's automated tests run locally with
+controlled provider responses and do not establish the state of a cloud account.
+
+## Troubleshooting
+
+| Symptom                                                      | Check                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The frontend says the service is offline                     | Verify the deployed `NEXT_PUBLIC_WORKER_URL`, the Worker `/health` response, and the browser Network tab. Redeploy Vercel after changing its public URL setting.                                                                            |
+| Browser requests fail with a CORS error                      | Set `ALLOWED_ORIGINS` to the exact frontend origin currently in the address bar, then redeploy the Worker. Production and preview domains are separate.                                                                                     |
+| `/health` reports `openai.configured: false`                 | Add a nonempty secret with the literal name `OPENAI_API_KEY` to the same Worker/environment whose URL is being checked. A production secret does not configure localhost.                                                                   |
+| A secret was accidentally named with the key value           | Delete that incorrectly named entry under Worker Settings → Variables and Secrets. Replace the exposed provider key, then add the new value under `OPENAI_API_KEY`. Do not share screenshots or secret-list output containing the old name. |
+| The key is configured but replies use deterministic guidance | Check the selected model, API account access, provider limits, and billing. Configuration presence is not a successful model call.                                                                                                          |
+| The Vercel build cannot find the shared package              | Enable source files outside the Root Directory and keep the workspace files. Use Node.js 24 and the pinned pnpm version through Corepack.                                                                                                   |
+| Database requests fail                                       | Confirm the deployed `DB` binding points to the intended database and apply all remote migrations. Local D1 data is separate.                                                                                                               |
 
 ## Optional semantic retrieval
 
-Keyword retrieval and private context work without Vectorize. To enable semantic
-ranking, create a 64-dimensional cosine index and add its `VECTORIZE` binding:
+Keyword retrieval and private context work without Vectorize. For semantic ranking,
+create a 64-dimensional cosine index and add its `VECTORIZE` binding:
 
 ```sh
 pnpm --filter @lockstep/worker exec wrangler vectorize create lockstep-remastered-runbooks --dimensions 64 --metric cosine --binding VECTORIZE --update-config
@@ -117,12 +205,13 @@ pnpm --filter @lockstep/worker exec wrangler vectorize upsert lockstep-remastere
 ```
 
 The export command reads `OPENAI_API_KEY`, `OPENAI_BASE_URL`, and
-`OPENAI_EMBEDDING_MODEL` from the shell, not `.dev.vars`, refuses hash embeddings, and will not
-overwrite an existing output file. Its output contains only bundled public runbooks.
-Keep the binding, model, dimensions, and runbook IDs consistent, then redeploy.
+`OPENAI_EMBEDDING_MODEL` from the shell, not `.dev.vars`. It refuses hash embeddings
+and will not overwrite an existing output file. The output contains only bundled
+public runbooks. Keep the binding, model, dimensions, and corpus IDs consistent,
+then redeploy the Worker.
 
-Private documents uploaded after binding the index are indexed automatically in an
-owner namespace. Existing keyword-only documents remain searchable; re-upload them
-if semantic indexing is needed. Failed indexing leaves keyword fallback usable.
-Private vector matches are checked against owned D1 chunks before their text can
-be used. D1 deletion remains authoritative even if remote vector cleanup fails.
+New private documents are indexed in owner namespaces when the index is configured.
+Existing keyword-only documents remain searchable; re-upload them if semantic
+indexing is needed. Failed indexing leaves keyword fallback usable. Matches resolve
+through owned, existing D1 chunks before their text is used; D1 deletion remains
+authoritative even if remote vector cleanup fails.

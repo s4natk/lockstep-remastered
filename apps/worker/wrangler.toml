@@ -3,12 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2026-10-04"
 
 [vars]
-ALLOWED_ORIGINS = "http://localhost:3000"
+ALLOWED_ORIGINS = "https://lockstep-remastered.vercel.app"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "lockstep-remastered"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "9a07119f-7e24-4977-9083-b61b59c9a458"
 
 [durable_objects]
 bindings = [

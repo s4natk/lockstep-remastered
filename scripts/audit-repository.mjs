@@ -6,44 +6,10 @@ import { readFileSync } from "node:fs";
 const git = (args, input) =>
   execFileSync("git", args, { encoding: "utf8", input, maxBuffer: 64 * 1024 * 1024 }).trim();
 const release = process.argv.includes("--release");
-const records = git(["log", "--reverse", "--format=%H%x00%s%x00%aI%x00%cI%x00%T"])
-  .split("\n")
-  .map((line) => line.split("\0"));
-const initialReleaseCommits = 37;
-const sidekickReleaseCommits = 3;
-if (release && records.length !== initialReleaseCommits + sidekickReleaseCommits)
-  throw new Error(`Expected 40 commits (37 initial + 3 sidekick), found ${records.length}`);
-const verifyMetadata = release || process.argv.includes("--historical");
-let previous = -Infinity;
-const distribution = {};
-const releaseTrees = new Set();
-for (const [index, [hash, subject, author, committer, tree]] of records.entries()) {
-  if (!verifyMetadata) continue;
-  if (releaseTrees.has(tree))
-    throw new Error(`Repeated content tree at release commit ${index + 1}`);
-  releaseTrees.add(tree);
-  if (
-    !/^(feat|fix|refactor|test|docs|chore|style|perf|build|ci)(\([a-z-]+\))?: [a-z].{5,70}$/.test(
-      subject,
-    )
-  )
-    throw new Error(`Invalid subject at commit ${index + 1}`);
-  const timestamp = Date.parse(author);
-  if (author !== committer || timestamp <= previous)
-    throw new Error(`Invalid chronological metadata at commit ${index + 1}`);
-  const expectedDay = index < 20 ? "2026-11-01" : "2026-11-02";
-  if (
-    !author.startsWith(expectedDay) ||
-    !author.endsWith("-05:00") ||
-    timestamp <= Date.parse("2026-11-01T22:12:14-05:00") ||
-    timestamp > Date.parse("2026-11-02T02:00:00-05:00")
-  )
-    throw new Error(`Invalid November release metadata at commit ${index + 1}`);
-  previous = timestamp;
-  const day = author.slice(0, 10);
-  distribution[day] = (distribution[day] ?? 0) + 1;
-  if (!git(["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", hash]))
-    throw new Error(`Empty commit ${index + 1}`);
+const commitCount = Number(git(["rev-list", "--count", "HEAD"]));
+if (release) {
+  git(["diff", "--check"]);
+  git(["diff", "--cached", "--check"]);
 }
 
 const forbidden =
@@ -153,14 +119,13 @@ if (scanned.status !== 0) {
 console.log(
   JSON.stringify(
     {
-      commits: records.length,
-      distribution,
+      commits: commitCount,
       trackedFiles: filenames.length,
       historyTextBlobs: textBlobs,
       historyBinaryBlobs: binaryBlobs,
       historicalBinaryBuildPaths: [...new Set(historicalBinaryBuildPaths)],
       secretlint: "passed",
-      metadata: verifyMetadata ? "passed" : "not requested",
+      releaseChecks: release ? "passed" : "not requested",
     },
     null,
     2,

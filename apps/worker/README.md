@@ -7,7 +7,8 @@ stage within that workflow.
 
 Run `pnpm dev:worker` from the repository root. The root README covers local setup,
 provider configuration, D1 provisioning, optional Vectorize, origin restrictions,
-and deployment. The checked-in D1 identifier is a placeholder for a new database.
+and deployment. When deploying under another Cloudflare account, create a D1 database
+and use its identifier with the existing `DB` binding.
 
 ## Investigation workflow
 
