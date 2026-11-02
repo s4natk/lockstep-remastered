@@ -50,7 +50,12 @@ export function NavSidebar({
   const rail = collapsed && !overlay;
 
   return (
-    <nav className={styles.root} data-collapsed={rail || undefined} data-overlay={overlay || undefined} aria-label="Workspace">
+    <nav
+      className={styles.root}
+      data-collapsed={rail || undefined}
+      data-overlay={overlay || undefined}
+      aria-label="Workspace"
+    >
       <div className={styles.brand}>
         {rail ? <LogoMark size={18} title="Lockstep" /> : <Logo size={18} />}
         <IconButton
@@ -62,15 +67,29 @@ export function NavSidebar({
       </div>
 
       <div className={styles.section}>
-        <NavItem icon="review" label="Review" active={view === "review"} rail={rail} onClick={() => onView("review")} />
-        <NavItem icon="ask" label="Ask" active={view === "ask"} rail={rail} onClick={() => onView("ask")} />
+        <NavItem
+          icon="review"
+          label="Review"
+          active={view === "review"}
+          rail={rail}
+          onClick={() => onView("review")}
+        />
+        <NavItem
+          icon="ask"
+          label="Ask"
+          active={view === "ask"}
+          rail={rail}
+          onClick={() => onView("ask")}
+        />
         <NavItem icon="search" label="Command palette" rail={rail} onClick={onPalette} />
       </div>
 
       {!rail ? (
         <div className={styles.history}>
           <h2>Recent</h2>
-          {history.length === 0 ? <p className={styles.empty}>Reviews you run stay in this browser.</p> : null}
+          {history.length === 0 ? (
+            <p className={styles.empty}>Reviews you run stay in this browser.</p>
+          ) : null}
           <ul>
             {history.map((record) => {
               const extra = extraStatementCount(record);
@@ -108,9 +127,17 @@ export function NavSidebar({
           onClick={onContext}
         />
         <NavItem icon="settings" label="Preferences" rail={rail} onClick={onSettings} />
-        <div className={styles.health} data-state={connection} title={connectionDetail(connection, model)}>
+        <div
+          className={styles.health}
+          data-state={connection}
+          title={connectionDetail(connection, model)}
+        >
           <span className={styles.dot} aria-hidden="true" />
-          {rail ? <span className="sr-only">{connectionLabel(connection)}</span> : <span>{connectionDetail(connection, model)}</span>}
+          {rail ? (
+            <span className="sr-only">{connectionLabel(connection)}</span>
+          ) : (
+            <span>{connectionDetail(connection, model)}</span>
+          )}
         </div>
         <a
           className={styles.credit}

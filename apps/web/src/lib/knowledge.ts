@@ -43,5 +43,9 @@ export function saveKnowledge(entries: KnowledgeEntry[]): void {
 export function enabledContext(entries: KnowledgeEntry[]) {
   return entries
     .filter((entry) => entry.enabled && entry.text.trim() !== "")
-    .map((entry) => ({ id: entry.id, title: entry.title.trim() || undefined, text: entry.text.trim() }));
+    .map((entry) => ({
+      id: entry.id,
+      title: entry.title.trim() || undefined,
+      text: entry.text.trim(),
+    }));
 }

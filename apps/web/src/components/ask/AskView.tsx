@@ -82,7 +82,12 @@ export function AskView({
           <span className={styles.kicker}>Ask</span>
           <span className={styles.hint}>Questions about Postgres DDL. Pasted SQL is reviewed.</span>
         </div>
-        <IconButton icon="clear" label="Clear thread" onClick={onClear} disabled={messages.length === 0} />
+        <IconButton
+          icon="clear"
+          label="Clear thread"
+          onClick={onClear}
+          disabled={messages.length === 0}
+        />
       </header>
 
       <div ref={scroller} className={styles.thread}>
@@ -91,8 +96,8 @@ export function AskView({
             <Icon name="ask" size={20} />
             <h2>Ask about a migration</h2>
             <p>
-              The assistant answers from retrieved runbooks. If you paste SQL, Lockstep routes it through the reviewer
-              instead.
+              The assistant answers from retrieved runbooks. If you paste SQL, Lockstep routes it
+              through the reviewer instead.
             </p>
             <ul className={styles.starters}>
               {STARTERS.map((starter) => (
@@ -150,7 +155,13 @@ export function AskView({
               Stop
             </Button>
           ) : (
-            <Button size="sm" variant="primary" icon="arrowUp" type="submit" disabled={draft.trim() === ""}>
+            <Button
+              size="sm"
+              variant="primary"
+              icon="arrowUp"
+              type="submit"
+              disabled={draft.trim() === ""}
+            >
               Send
             </Button>
           )}

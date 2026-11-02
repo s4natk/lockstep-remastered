@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { Icon } from "../ui/Icon";
 import styles from "./Toasts.module.css";
@@ -57,7 +65,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {toast.action.label}
               </button>
             ) : null}
-            <button type="button" className={styles.close} aria-label="Dismiss" onClick={() => dismiss(toast.id)}>
+            <button
+              type="button"
+              className={styles.close}
+              aria-label="Dismiss"
+              onClick={() => dismiss(toast.id)}
+            >
               <Icon name="x" size={14} />
             </button>
           </div>

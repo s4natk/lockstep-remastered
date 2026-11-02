@@ -36,7 +36,10 @@ export function parseMarkdown(source: string): Block[] {
       index += 1;
       let closed = false;
       while (index < lines.length) {
-        if (lines[index]!.trim().startsWith(marker) && lines[index]!.trim().replace(/[`~]/g, "") === "") {
+        if (
+          lines[index]!.trim().startsWith(marker) &&
+          lines[index]!.trim().replace(/[`~]/g, "") === ""
+        ) {
           closed = true;
           index += 1;
           break;
@@ -44,7 +47,12 @@ export function parseMarkdown(source: string): Block[] {
         body.push(lines[index]!);
         index += 1;
       }
-      blocks.push({ type: "code", language: fence[3]!.toLowerCase(), code: body.join("\n"), closed });
+      blocks.push({
+        type: "code",
+        language: fence[3]!.toLowerCase(),
+        code: body.join("\n"),
+        closed,
+      });
       continue;
     }
 
@@ -55,7 +63,11 @@ export function parseMarkdown(source: string): Block[] {
 
     const heading = HEADING.exec(line);
     if (heading) {
-      blocks.push({ type: "heading", level: heading[1]!.length, children: parseInline(heading[2]!) });
+      blocks.push({
+        type: "heading",
+        level: heading[1]!.length,
+        children: parseInline(heading[2]!),
+      });
       index += 1;
       continue;
     }

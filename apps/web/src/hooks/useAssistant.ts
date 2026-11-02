@@ -45,7 +45,9 @@ export function useAssistant({ onReviewComplete }: Options) {
   }, [commit]);
 
   useEffect(() => {
-    const settled = messages.filter((message) => message.status !== "waiting" && message.status !== "streaming");
+    const settled = messages.filter(
+      (message) => message.status !== "waiting" && message.status !== "streaming",
+    );
     if (settled.length === messages.length) {
       if (messages.length === 0) {
         removeKey(STORAGE_KEYS.thread);
@@ -55,7 +57,9 @@ export function useAssistant({ onReviewComplete }: Options) {
     }
   }, [messages]);
 
-  const busy = messages.some((message) => message.status === "waiting" || message.status === "streaming");
+  const busy = messages.some(
+    (message) => message.status === "waiting" || message.status === "streaming",
+  );
 
   const run = useCallback(
     (userMessage: AskMessage, context: ContextRef[], base: AskMessage[]) => {
@@ -103,7 +107,12 @@ export function useAssistant({ onReviewComplete }: Options) {
                 return {
                   ...current,
                   review,
-                  status: review.status === "completed" ? "done" : review.status === "failed" ? "error" : "streaming",
+                  status:
+                    review.status === "completed"
+                      ? "done"
+                      : review.status === "failed"
+                        ? "error"
+                        : "streaming",
                   error: review.status === "failed" ? review.error : undefined,
                   text: review.status === "completed" ? (review.note ?? "") : current.text,
                 };
@@ -124,7 +133,9 @@ export function useAssistant({ onReviewComplete }: Options) {
               ...current,
               status: "error",
               error: message,
-              review: current.review ? { ...current.review, status: "failed", error: message } : undefined,
+              review: current.review
+                ? { ...current.review, status: "failed", error: message }
+                : undefined,
             })),
         },
       );
@@ -209,7 +220,8 @@ function loadThread(): AskMessage[] {
       return [];
     }
     const status = item.status === "error" || item.status === "stopped" ? item.status : "done";
-    const review = item.review === undefined ? undefined : (sanitizeRecord(item.review) ?? undefined);
+    const review =
+      item.review === undefined ? undefined : (sanitizeRecord(item.review) ?? undefined);
     return [
       {
         id: item.id,

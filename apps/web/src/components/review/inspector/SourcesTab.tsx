@@ -49,16 +49,23 @@ export function SourcesTab({ record, highlight, onJumpStatement }: SourcesTabPro
           </div>
           <blockquote className={styles.quote}>“{citation.quote}”</blockquote>
           {citation.kind === "parser" ? (
-            <Button size="sm" variant="ghost" icon="review" onClick={() => {
-              const statement = statementIndexOf(citation.sourceId);
-              if (statement !== null) {
-                onJumpStatement(statement);
-              }
-            }}>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="review"
+              onClick={() => {
+                const statement = statementIndexOf(citation.sourceId);
+                if (statement !== null) {
+                  onJumpStatement(statement);
+                }
+              }}
+            >
               Jump to statement
             </Button>
           ) : null}
-          {citation.kind === "context" ? <ContextPreview citation={citation} record={record} /> : null}
+          {citation.kind === "context" ? (
+            <ContextPreview citation={citation} record={record} />
+          ) : null}
         </li>
       ))}
     </ol>

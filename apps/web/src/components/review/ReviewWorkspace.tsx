@@ -87,17 +87,39 @@ export function ReviewWorkspace({
             onClick={onToggleInspector}
           />
           <IconButton icon="library" label="Example migrations" onClick={onExamples} />
-          <IconButton icon="wrap" label={wrap ? "Disable wrapping" : "Wrap long lines"} active={wrap} onClick={onToggleWrap} />
+          <IconButton
+            icon="wrap"
+            label={wrap ? "Disable wrapping" : "Wrap long lines"}
+            active={wrap}
+            onClick={onToggleWrap}
+          />
           <IconButton icon="format" label="Format SQL" onClick={onFormat} />
           <IconButton icon="clear" label="Clear editor" onClick={onClear} disabled={busy} />
           <Menu
             label="Export"
             items={[
-              { id: "md", label: "Export Markdown", icon: "download", disabled: record?.status !== "completed", run: onExportMarkdown },
-              { id: "json", label: "Export JSON", icon: "download", disabled: record?.status !== "completed", run: onExportJson },
+              {
+                id: "md",
+                label: "Export Markdown",
+                icon: "download",
+                disabled: record?.status !== "completed",
+                run: onExportMarkdown,
+              },
+              {
+                id: "json",
+                label: "Export JSON",
+                icon: "download",
+                disabled: record?.status !== "completed",
+                run: onExportJson,
+              },
             ]}
             trigger={(props) => (
-              <button {...props} type="button" className={styles.menuTrigger} aria-label="Export review">
+              <button
+                {...props}
+                type="button"
+                className={styles.menuTrigger}
+                aria-label="Export review"
+              >
                 <Icon name="download" size={16} />
               </button>
             )}
@@ -143,7 +165,12 @@ export function ReviewWorkspace({
             <span className={styles.sep} aria-hidden="true" />
             <span className={styles.tags}>
               {realHazards.map((entry) => (
-                <HazardTag key={entry.code} code={entry.code} count={entry.count} variant="inline" />
+                <HazardTag
+                  key={entry.code}
+                  code={entry.code}
+                  count={entry.count}
+                  variant="inline"
+                />
               ))}
             </span>
           </>

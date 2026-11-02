@@ -33,7 +33,7 @@ export function Segmented<T extends string>({
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     const index = options.findIndex((option) => option.value === value);
-    let next = index;
+    let next: number;
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
       next = (index + 1) % options.length;
     } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {

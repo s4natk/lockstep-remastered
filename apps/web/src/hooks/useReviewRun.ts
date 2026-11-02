@@ -29,7 +29,11 @@ export function applyReviewEvent(record: ReviewRecord, event: ServerEvent): Revi
       if (event.stage === "retrieve") {
         return { ...record, progress: { ...progress, retrieving: true }, status: "retrieving" };
       }
-      return { ...record, progress: { ...progress, retrieving: true, drafting: true }, status: "drafting" };
+      return {
+        ...record,
+        progress: { ...progress, retrieving: true, drafting: true },
+        status: "drafting",
+      };
     case "token":
       if (record.reply !== undefined) {
         return { ...record, progress, reply: record.reply + event.content };
@@ -59,14 +63,26 @@ export function applyReviewEvent(record: ReviewRecord, event: ServerEvent): Revi
         finishedAt: Date.now(),
         reply: event.reply,
         failure: "answered-as-chat",
-        error: "The Worker answered this input as a question instead of reviewing it as a migration.",
+        error:
+          "The Worker answered this input as a question instead of reviewing it as a migration.",
       };
     case "error":
-      return { ...record, progress, status: "failed", finishedAt: Date.now(), error: event.error, failure: "worker" };
+      return {
+        ...record,
+        progress,
+        status: "failed",
+        finishedAt: Date.now(),
+        error: event.error,
+        failure: "worker",
+      };
   }
 }
 
-export function newLiveReview(sql: string, context: ContextRef[], drafter?: "live" | "mock"): ReviewRecord {
+export function newLiveReview(
+  sql: string,
+  context: ContextRef[],
+  drafter?: "live" | "mock",
+): ReviewRecord {
   return {
     id: crypto.randomUUID(),
     sql,
@@ -125,7 +141,11 @@ export function useReviewRun({ onComplete }: Options) {
         initial.id,
         { type: "review", sql, context: context.map((entry) => entry.text) },
         {
-          onOpen: () => update((current) => ({ ...current, progress: { ...current.progress, connected: true } })),
+          onOpen: () =>
+            update((current) => ({
+              ...current,
+              progress: { ...current.progress, connected: true },
+            })),
           onEvent: (event) => update((current) => applyReviewEvent(current, event)),
           onFailure: (message) =>
             update((current) => ({
@@ -145,7 +165,12 @@ export function useReviewRun({ onComplete }: Options) {
   const stop = useCallback(() => {
     const current = recordRef.current;
     closeSession();
-    if (current !== null && current.origin === "live" && current.status !== "completed" && current.status !== "failed") {
+    if (
+      current !== null &&
+      current.origin === "live" &&
+      current.status !== "completed" &&
+      current.status !== "failed"
+    ) {
       commit({ ...current, status: "stopped", finishedAt: Date.now() });
     }
   }, [closeSession, commit]);

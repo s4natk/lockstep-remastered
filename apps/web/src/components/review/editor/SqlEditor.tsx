@@ -3,7 +3,12 @@
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { PostgreSQL, sql } from "@codemirror/lang-sql";
-import { bracketMatching, indentOnInput, indentUnit, syntaxHighlighting } from "@codemirror/language";
+import {
+  bracketMatching,
+  indentOnInput,
+  indentUnit,
+  syntaxHighlighting,
+} from "@codemirror/language";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
 import {
   drawSelection,
@@ -166,7 +171,9 @@ export function SqlEditor({
   }, []);
 
   useEffect(() => {
-    view.current?.dispatch({ effects: wrapping.current.reconfigure(wrap ? EditorView.lineWrapping : []) });
+    view.current?.dispatch({
+      effects: wrapping.current.reconfigure(wrap ? EditorView.lineWrapping : []),
+    });
   }, [wrap]);
 
   useEffect(() => {
@@ -194,7 +201,10 @@ export function SqlEditor({
       setHazards: (hazards) => view.current?.dispatch({ effects: setHazards.of(hazards) }),
       revealHazard: (hazard) => {
         view.current?.dispatch({
-          effects: [setActiveHazard.of(hazard.key), EditorView.scrollIntoView(hazard.from, { y: "center" })],
+          effects: [
+            setActiveHazard.of(hazard.key),
+            EditorView.scrollIntoView(hazard.from, { y: "center" }),
+          ],
         });
       },
       revealRange: (from, to) => {

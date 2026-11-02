@@ -39,15 +39,19 @@ export function ContextModal({ open, entries, onClose, onChange }: ContextModalP
   };
 
   const update = (id: string, patch: Partial<KnowledgeEntry>) => {
-    onChange(entries.map((entry) => (entry.id === id ? { ...entry, ...patch, updatedAt: Date.now() } : entry)));
+    onChange(
+      entries.map((entry) =>
+        entry.id === id ? { ...entry, ...patch, updatedAt: Date.now() } : entry,
+      ),
+    );
   };
 
   return (
     <Dialog open={open} title="Review context" size="lg" onClose={onClose}>
       <div className={styles.root}>
         <p className={styles.lede}>
-          Enabled notes are sent with every review and Ask turn as <code>context-N</code> sources. The citation check
-          can quote them.
+          Enabled notes are sent with every review and Ask turn as <code>context-N</code> sources.
+          The citation check can quote them.
         </p>
         <div className={styles.compose}>
           <input
@@ -63,7 +67,13 @@ export function ContextModal({ open, entries, onClose, onChange }: ContextModalP
             aria-label="Context note"
             onChange={(event) => setText(event.target.value)}
           />
-          <Button size="sm" variant="secondary" icon="plus" onClick={add} disabled={text.trim() === ""}>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon="plus"
+            onClick={add}
+            disabled={text.trim() === ""}
+          >
             Add note
           </Button>
         </div>

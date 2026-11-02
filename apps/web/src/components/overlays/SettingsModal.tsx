@@ -69,7 +69,11 @@ export function SettingsModal({
             />
           </Row>
           <Row label="Wrap long lines">
-            <Switch checked={preferences.wrap} label="Wrap long lines" onChange={(wrap) => onUpdate({ wrap })} />
+            <Switch
+              checked={preferences.wrap}
+              label="Wrap long lines"
+              onChange={(wrap) => onUpdate({ wrap })}
+            />
           </Row>
         </section>
 
@@ -94,7 +98,12 @@ export function SettingsModal({
         <section>
           <h3>This browser</h3>
           <Row label={`${historyCount} saved reviews`}>
-            <button type="button" className={styles.danger} onClick={onClearHistory} disabled={historyCount === 0}>
+            <button
+              type="button"
+              className={styles.danger}
+              onClick={onClearHistory}
+              disabled={historyCount === 0}
+            >
               Clear history
             </button>
           </Row>

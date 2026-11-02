@@ -84,7 +84,9 @@ export function piecePath(piece: MarkPiece): string {
     const [sx, sy] = corner.start;
     const [ex, ey] = corner.end;
     parts.push(`${index === 0 ? "M" : "L"}${round(sx)} ${round(sy)}`);
-    parts.push(`A${round(corner.r)} ${round(corner.r)} 0 0 ${corner.clockwise ? 1 : 0} ${round(ex)} ${round(ey)}`);
+    parts.push(
+      `A${round(corner.r)} ${round(corner.r)} 0 0 ${corner.clockwise ? 1 : 0} ${round(ex)} ${round(ey)}`,
+    );
   });
   parts.push("Z");
   return parts.join("");

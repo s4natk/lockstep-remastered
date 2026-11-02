@@ -3,13 +3,7 @@ import type { Citation, ParseResult } from "@lockstep/shared";
 import type { TraceSpan } from "./protocol";
 
 export type ReviewStatus =
-  | "connecting"
-  | "parsing"
-  | "retrieving"
-  | "drafting"
-  | "completed"
-  | "failed"
-  | "stopped";
+  "connecting" | "parsing" | "retrieving" | "drafting" | "completed" | "failed" | "stopped";
 
 /** A context note as it was sent; its position is the `context-N` source id. */
 export interface ContextRef {

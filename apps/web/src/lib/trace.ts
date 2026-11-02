@@ -8,7 +8,13 @@ const LABELS: Record<string, { label: string; depth: number }> = {
   "review.draft": { label: "Draft", depth: 0 },
 };
 
-const ORDER = ["wasm.parse", "retrieval.hybrid", "retrieval.vectorize", "retrieval.embed", "review.draft"];
+const ORDER = [
+  "wasm.parse",
+  "retrieval.hybrid",
+  "retrieval.vectorize",
+  "retrieval.embed",
+  "review.draft",
+];
 
 export interface TraceRow extends TraceSpan {
   label: string;

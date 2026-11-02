@@ -5,7 +5,7 @@ export function connectionLabel(state: ConnectionState): string {
     case "live":
       return "Live";
     case "mock":
-      return "Demo";
+      return "Deterministic";
     case "reachable":
       return "Worker";
     case "checking":
@@ -20,7 +20,7 @@ export function connectionDetail(state: ConnectionState, model?: string): string
     case "live":
       return model ? `Live · ${model}` : "Live OpenAI";
     case "mock":
-      return "Demo drafts · no API key";
+      return "Deterministic guidance ? no provider key";
     case "reachable":
       return "Worker reachable";
     case "checking":

@@ -15,7 +15,15 @@ interface SplitterProps {
   onCommit: (value: number) => void;
 }
 
-export function Splitter({ label, value, min, max, defaultValue, onChange, onCommit }: SplitterProps) {
+export function Splitter({
+  label,
+  value,
+  min,
+  max,
+  defaultValue,
+  onChange,
+  onCommit,
+}: SplitterProps) {
   const drag = useRef<{ startX: number; startValue: number; latest: number } | null>(null);
 
   const clamp = (next: number) => Math.round(Math.min(max, Math.max(min, next)));

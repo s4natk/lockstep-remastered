@@ -21,9 +21,14 @@ export function RolloutTab({ record, onOpenSource }: RolloutTabProps) {
       <div className={styles.root}>
         <div className={styles.banner}>
           <Icon name="alert" />
-          <p>Every drafted sentence was removed by the citation check. Nothing in the note quoted a retrieved source.</p>
+          <p>
+            Every drafted sentence was removed by the citation check. Nothing in the note quoted a
+            retrieved source.
+          </p>
         </div>
-        {record.dropped && record.dropped.length > 0 ? <Dropped sentences={record.dropped} /> : null}
+        {record.dropped && record.dropped.length > 0 ? (
+          <Dropped sentences={record.dropped} />
+        ) : null}
       </div>
     );
   }
@@ -31,8 +36,8 @@ export function RolloutTab({ record, onOpenSource }: RolloutTabProps) {
   if (sentences.length === 0 && !record.draft && !isActive(record)) {
     return (
       <p className={styles.empty}>
-        After the parser and retrieval finish, the model drafts a rollout note. Sentences that do not quote a source are
-        dropped.
+        After the parser and retrieval finish, the model drafts a rollout note. Sentences that do
+        not quote a source are dropped.
       </p>
     );
   }
@@ -40,12 +45,17 @@ export function RolloutTab({ record, onOpenSource }: RolloutTabProps) {
   return (
     <div className={styles.root}>
       {record.drafter === "mock" ? (
-        <p className={styles.note}>Demo drafter — this note is a deterministic mock, not a live model.</p>
+        <p className={styles.note}>
+          Deterministic guidance based on parser findings and retrieved sources. AI drafting is
+          unavailable.
+        </p>
       ) : null}
 
       {sentences.length > 0 ? (
         <div className={styles.toolbar}>
-          <span>{sentences.length} cited {sentences.length === 1 ? "sentence" : "sentences"}</span>
+          <span>
+            {sentences.length} cited {sentences.length === 1 ? "sentence" : "sentences"}
+          </span>
           <CopyButton text={note} label="Copy rollout note">
             Copy note
           </CopyButton>
@@ -79,7 +89,11 @@ export function RolloutTab({ record, onOpenSource }: RolloutTabProps) {
         </ol>
       ) : record.draft || isActive(record) ? (
         <div className={styles.draft} aria-live="polite">
-          {record.draft ? <p>{record.draft}</p> : <p className={styles.empty}>Waiting for the first draft tokens.</p>}
+          {record.draft ? (
+            <p>{record.draft}</p>
+          ) : (
+            <p className={styles.empty}>Waiting for the first draft tokens.</p>
+          )}
           {isActive(record) ? <span className={styles.caret} aria-hidden="true" /> : null}
         </div>
       ) : null}

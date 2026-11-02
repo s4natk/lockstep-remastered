@@ -6,7 +6,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 
-import { MARK_BOUNDS, MARK_PATHS, MARK_PIECES, pieceOutline } from "../src/components/brand/mark.ts";
+import {
+  MARK_BOUNDS,
+  MARK_PATHS,
+  MARK_PIECES,
+  pieceOutline,
+} from "../src/components/brand/mark.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -39,8 +44,13 @@ function roundedRect(x, y, size, radius, segments = 16) {
 function markPolygons(size, span) {
   const scale = span / (MARK_BOUNDS.max - MARK_BOUNDS.min);
   const offset = (size - span) / 2;
-  const place = ([x, y]) => [(x - MARK_BOUNDS.min) * scale + offset, (y - MARK_BOUNDS.min) * scale + offset];
-  return Object.fromEntries(MARK_PIECES.map((piece) => [piece.id, pieceOutline(piece, 24).map(place)]));
+  const place = ([x, y]) => [
+    (x - MARK_BOUNDS.min) * scale + offset,
+    (y - MARK_BOUNDS.min) * scale + offset,
+  ];
+  return Object.fromEntries(
+    MARK_PIECES.map((piece) => [piece.id, pieceOutline(piece, 24).map(place)]),
+  );
 }
 
 function coverage(size, polygon, samples = 16) {
@@ -204,7 +214,9 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${MARK_BOUNDS.min}
 write("src/app/icon.svg", svg);
 write(
   "src/app/favicon.ico",
-  encodeIco([16, 32, 48].map((size) => ({ size, png: tileIcon(size, { rounded: true, markShare: 0.7 }) }))),
+  encodeIco(
+    [16, 32, 48].map((size) => ({ size, png: tileIcon(size, { rounded: true, markShare: 0.7 }) })),
+  ),
 );
 write("src/app/apple-icon.png", tileIcon(180, { rounded: false, markShare: 0.6 }));
 write("public/icons/icon-192.png", tileIcon(192, { rounded: true, markShare: 0.64 }));

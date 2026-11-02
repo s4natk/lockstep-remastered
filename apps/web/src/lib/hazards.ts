@@ -18,7 +18,9 @@ export function hazardLabel(code: HazardCode): string {
   return HAZARD_META[code]?.label ?? code;
 }
 
-export function hazardCounts(parse: ParseResult | undefined): Array<{ code: HazardCode; count: number }> {
+export function hazardCounts(
+  parse: ParseResult | undefined,
+): Array<{ code: HazardCode; count: number }> {
   if (parse === undefined) {
     return [];
   }

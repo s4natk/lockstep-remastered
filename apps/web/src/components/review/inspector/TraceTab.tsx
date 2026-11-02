@@ -38,7 +38,10 @@ export function TraceTab({ record }: { record: ReviewRecord }) {
               <span className={styles.ms}>{formatSpan(row.durationMs)}</span>
             </div>
             <div className={styles.track} aria-hidden="true">
-              <span className={styles.bar} style={{ width: `${Math.max(4, (row.durationMs / max) * 100)}%` }} />
+              <span
+                className={styles.bar}
+                style={{ width: `${Math.max(4, (row.durationMs / max) * 100)}%` }}
+              />
             </div>
           </li>
         ))}

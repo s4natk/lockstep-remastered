@@ -56,7 +56,10 @@ export function reviewToMarkdown(record: ReviewRecord): string {
   }
 
   lines.push("## Rollout note", "");
-  lines.push("Drafted by the language model. Sentences that did not quote a source were removed.", "");
+  lines.push(
+    "Drafted by the language model. Sentences that did not quote a source were removed.",
+    "",
+  );
   const sentences = linkSentences(record.note ?? "", citations);
   if (sentences.length === 0) {
     lines.push("No sentences passed the citation check.", "");

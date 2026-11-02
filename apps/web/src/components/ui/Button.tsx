@@ -28,11 +28,17 @@ export function Button({
   return (
     <button
       type={type}
-      className={[styles.button, styles[variant], styles[size], className].filter(Boolean).join(" ")}
+      className={[styles.button, styles[variant], styles[size], className]
+        .filter(Boolean)
+        .join(" ")}
       aria-busy={busy || undefined}
       {...rest}
     >
-      {busy ? <span className={styles.spinner} aria-hidden="true" /> : icon ? <Icon name={icon} size={14} /> : null}
+      {busy ? (
+        <span className={styles.spinner} aria-hidden="true" />
+      ) : icon ? (
+        <Icon name={icon} size={14} />
+      ) : null}
       {children ? <span className={styles.label}>{children}</span> : null}
       {trailing}
     </button>

@@ -59,7 +59,11 @@ export function ReviewInspector({
           onChange={onTab}
           options={[
             { value: "overview", label: "Overview" },
-            { value: "rollout", label: "Rollout", badge: record?.note ? undefined : record?.draft ? "…" : undefined },
+            {
+              value: "rollout",
+              label: "Rollout",
+              badge: record?.note ? undefined : record?.draft ? "…" : undefined,
+            },
             { value: "sources", label: "Sources", badge: badge(record?.citations?.length) },
             { value: "trace", label: "Trace" },
             { value: "raw", label: "Raw" },
@@ -68,7 +72,11 @@ export function ReviewInspector({
       </header>
       <div ref={highlightRef} className={styles.body}>
         {record === null ? (
-          tab === "overview" ? <OverviewEmpty onExamples={onExamples} /> : <p className={styles.empty}>Run a review first.</p>
+          tab === "overview" ? (
+            <OverviewEmpty onExamples={onExamples} />
+          ) : (
+            <p className={styles.empty}>Run a review first.</p>
+          )
         ) : tab === "overview" ? (
           <OverviewTab
             record={record}
@@ -78,7 +86,11 @@ export function ReviewInspector({
         ) : tab === "rollout" ? (
           <RolloutTab record={record} onOpenSource={onOpenSource} />
         ) : tab === "sources" ? (
-          <SourcesTab record={record} highlight={highlightSource} onJumpStatement={onJumpStatement} />
+          <SourcesTab
+            record={record}
+            highlight={highlightSource}
+            onJumpStatement={onJumpStatement}
+          />
         ) : tab === "trace" ? (
           <TraceTab record={record} />
         ) : (

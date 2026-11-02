@@ -46,7 +46,10 @@ export function lockstepEditorTheme() {
       outline: "1px solid var(--accent-line)",
       borderRadius: "2px",
     },
-    "&.cm-focused .cm-nonmatchingBracket": { color: "var(--danger)", backgroundColor: "transparent" },
+    "&.cm-focused .cm-nonmatchingBracket": {
+      color: "var(--danger)",
+      backgroundColor: "transparent",
+    },
     ".cm-placeholder": { color: "var(--text-3)", fontStyle: "normal" },
     ".cm-tooltip": {
       backgroundColor: "var(--overlay)",

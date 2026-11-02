@@ -1,6 +1,13 @@
 import type { HazardCode } from "@lockstep/shared";
 import { RangeSet, StateEffect, StateField, type EditorState, type Range } from "@codemirror/state";
-import { Decoration, EditorView, GutterMarker, gutterLineClass, hoverTooltip, type DecorationSet } from "@codemirror/view";
+import {
+  Decoration,
+  EditorView,
+  GutterMarker,
+  gutterLineClass,
+  hoverTooltip,
+  type DecorationSet,
+} from "@codemirror/view";
 
 import { hazardLabel } from "../../../lib/hazards";
 
@@ -36,7 +43,11 @@ function lineInfo(state: EditorState, items: EditorHazard[], active: string | nu
     const last = state.doc.lineAt(Math.max(item.from, item.to - 1)).number;
     for (let number = first; number <= last; number += 1) {
       const line = state.doc.line(number);
-      const entry = lines.get(number) ?? { from: line.from, codes: new Set<HazardCode>(), active: false };
+      const entry = lines.get(number) ?? {
+        from: line.from,
+        codes: new Set<HazardCode>(),
+        active: false,
+      };
       entry.codes.add(item.code);
       entry.active ||= item.key === active;
       lines.set(number, entry);
@@ -57,7 +68,12 @@ function build(state: EditorState, items: EditorHazard[], active: string | null)
   }
   for (const item of items) {
     if (item.to > item.from) {
-      ranges.push(Decoration.mark({ class: `cm-hazard-mark cm-hazard--${item.code}` }).range(item.from, item.to));
+      ranges.push(
+        Decoration.mark({ class: `cm-hazard-mark cm-hazard--${item.code}` }).range(
+          item.from,
+          item.to,
+        ),
+      );
     }
   }
   return Decoration.set(ranges, true);
@@ -82,7 +98,11 @@ export const hazardField = StateField.define<HazardState>({
       if (effect.is(setHazards)) {
         const length = transaction.state.doc.length;
         items = effect.value
-          .map((item) => ({ ...item, from: Math.min(item.from, length), to: Math.min(item.to, length) }))
+          .map((item) => ({
+            ...item,
+            from: Math.min(item.from, length),
+            to: Math.min(item.to, length),
+          }))
           .filter((item) => item.to > item.from);
         active = null;
         changed = true;
@@ -114,13 +134,17 @@ class HazardGutterMarker extends GutterMarker {
 const hazardGutterClass = gutterLineClass.compute([hazardField], (state) => {
   const { items, active } = state.field(hazardField);
   return RangeSet.of(
-    lineInfo(state, items, active).map((line) => new HazardGutterMarker(primaryCode(line.codes)).range(line.from)),
+    lineInfo(state, items, active).map((line) =>
+      new HazardGutterMarker(primaryCode(line.codes)).range(line.from),
+    ),
   );
 });
 
 const hazardTooltip = hoverTooltip(
   (view, pos) => {
-    const hits = view.state.field(hazardField).items.filter((item) => pos >= item.from && pos <= item.to);
+    const hits = view.state
+      .field(hazardField)
+      .items.filter((item) => pos >= item.from && pos <= item.to);
     if (hits.length === 0) {
       return null;
     }

@@ -13,7 +13,9 @@ export function loadHistory(): ReviewRecord[] {
 export function saveHistory(records: ReviewRecord[]): void {
   writeJson(
     STORAGE_KEYS.history,
-    records.slice(0, HISTORY_LIMIT).map((record) => ({ ...record, draft: undefined, origin: "history" })),
+    records
+      .slice(0, HISTORY_LIMIT)
+      .map((record) => ({ ...record, draft: undefined, origin: "history" })),
   );
 }
 

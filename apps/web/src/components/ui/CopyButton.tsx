@@ -31,14 +31,25 @@ export function CopyButton({ text, label, children, size = "sm" }: CopyButtonPro
 
   if (children) {
     return (
-      <Button size={size} variant="ghost" icon={copied ? "check" : "copy"} onClick={copy} aria-label={label}>
+      <Button
+        size={size}
+        variant="ghost"
+        icon={copied ? "check" : "copy"}
+        onClick={copy}
+        aria-label={label}
+      >
         {copied ? "Copied" : children}
       </Button>
     );
   }
   return (
     <>
-      <IconButton icon={copied ? "check" : "copy"} label={copied ? "Copied" : label} size={size} onClick={copy} />
+      <IconButton
+        icon={copied ? "check" : "copy"}
+        label={copied ? "Copied" : label}
+        size={size}
+        onClick={copy}
+      />
       <span className="sr-only" aria-live="polite">
         {copied ? "Copied" : ""}
       </span>

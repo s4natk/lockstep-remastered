@@ -25,14 +25,19 @@ export function OverviewTab({ record, activeHazard, onSelectHazard }: OverviewTa
   const statements = parse?.statements.length ?? 0;
   const counts = hazardCounts(parse);
   const elapsed =
-    record.finishedAt !== undefined ? formatElapsed(record.finishedAt - record.createdAt) : undefined;
+    record.finishedAt !== undefined
+      ? formatElapsed(record.finishedAt - record.createdAt)
+      : undefined;
 
   return (
     <div className={styles.root}>
       <Pipeline record={record} />
 
       {record.status === "failed" || record.status === "stopped" ? (
-        <div className={styles.banner} data-tone={record.status === "failed" ? "danger" : "neutral"}>
+        <div
+          className={styles.banner}
+          data-tone={record.status === "failed" ? "danger" : "neutral"}
+        >
           <Icon name={record.status === "failed" ? "alert" : "stop"} />
           <div>
             <p>{statusText(record)}</p>
@@ -44,12 +49,19 @@ export function OverviewTab({ record, activeHazard, onSelectHazard }: OverviewTa
       {record.failure === "answered-as-chat" && record.reply ? (
         <div className={styles.banner} data-tone="neutral">
           <Icon name="info" />
-          <p>The Worker answered this as a question. Open Ask to continue the thread, or send it as a review.</p>
+          <p>
+            The Worker answered this as a question. Open Ask to continue the thread, or send it as a
+            review.
+          </p>
         </div>
       ) : null}
 
       <section className={styles.stats} aria-label="Review summary">
-        <Stat label="Statements" value={parse ? String(statements) : "—"} hint={reviewHint(record)} />
+        <Stat
+          label="Statements"
+          value={parse ? String(statements) : "—"}
+          hint={reviewHint(record)}
+        />
         <Stat
           label="Hazards"
           value={parse ? String(hazards.filter((hazard) => hazard.code !== "safe").length) : "—"}
@@ -58,7 +70,13 @@ export function OverviewTab({ record, activeHazard, onSelectHazard }: OverviewTa
         <Stat
           label="Duration"
           value={elapsed ?? (isActive(record) ? "…" : "—")}
-          hint={record.drafter === "mock" ? "Demo drafter" : record.drafter === "live" ? "Live model" : "Worker"}
+          hint={
+            record.drafter === "mock"
+              ? "Deterministic guidance"
+              : record.drafter === "live"
+                ? "Live model"
+                : "Worker"
+          }
         />
       </section>
 
@@ -71,7 +89,9 @@ export function OverviewTab({ record, activeHazard, onSelectHazard }: OverviewTa
       ) : null}
 
       {isParserRejection(record) ? (
-        <p className={styles.empty}>The Rust parser rejected this input before retrieval started.</p>
+        <p className={styles.empty}>
+          The Rust parser rejected this input before retrieval started.
+        </p>
       ) : hazards.length === 0 && parse ? (
         <p className={styles.empty}>The parser reported no hazards on this migration.</p>
       ) : hazards.length === 0 ? (
@@ -84,10 +104,7 @@ export function OverviewTab({ record, activeHazard, onSelectHazard }: OverviewTa
             const key = hazardKey(hazard, index);
             return (
               <li key={key}>
-                <div
-                  className={styles.item}
-                  data-active={key === activeHazard || undefined}
-                >
+                <div className={styles.item} data-active={key === activeHazard || undefined}>
                   <button
                     type="button"
                     className={styles.itemHit}
@@ -151,7 +168,10 @@ export function OverviewEmpty({ onExamples }: { onExamples: () => void }) {
     <div className={styles.vacant}>
       <Icon name="review" size={20} />
       <h3>No review yet</h3>
-      <p>Paste a PostgreSQL migration and run it. The parser, retrieved runbooks, and cited rollout note land here.</p>
+      <p>
+        Paste a PostgreSQL migration and run it. The parser, retrieved runbooks, and cited rollout
+        note land here.
+      </p>
       <Button size="sm" icon="library" onClick={onExamples}>
         Browse examples
       </Button>

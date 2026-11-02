@@ -13,9 +13,19 @@ import { EXAMPLES } from "../lib/examples";
 import { reviewFileName, reviewToJson, reviewToMarkdown } from "../lib/exportReview";
 import { formatSql } from "../lib/format";
 import { loadHistory, saveHistory, upsertHistory } from "../lib/history";
-import { enabledContext, loadKnowledge, saveKnowledge, type KnowledgeEntry } from "../lib/knowledge";
+import {
+  enabledContext,
+  loadKnowledge,
+  saveKnowledge,
+  type KnowledgeEntry,
+} from "../lib/knowledge";
 import { isTypingTarget } from "../lib/platform";
-import { clampInspector, DEFAULT_PREFERENCES, INSPECTOR_MAX, INSPECTOR_MIN } from "../lib/preferences";
+import {
+  clampInspector,
+  DEFAULT_PREFERENCES,
+  INSPECTOR_MAX,
+  INSPECTOR_MIN,
+} from "../lib/preferences";
 import { extraStatementCount, isActive, reviewTitle, type ReviewRecord } from "../lib/review";
 import { STORAGE_KEYS } from "../lib/storage";
 import { AskView } from "./ask/AskView";
@@ -213,20 +223,97 @@ export function AppShell() {
 
   const commands = useMemo<Command[]>(() => {
     const actions: Command[] = [
-      { id: "review", group: "Actions", label: "Review migration", icon: "play", shortcut: ["Mod", "Enter"], run: () => startReview() },
+      {
+        id: "review",
+        group: "Actions",
+        label: "Review migration",
+        icon: "play",
+        shortcut: ["Mod", "Enter"],
+        run: () => startReview(),
+      },
       { id: "stop", group: "Actions", label: "Stop review", icon: "stop", run: run.stop },
-      { id: "format", group: "Actions", label: "Format SQL", icon: "format", shortcut: ["Shift", "Alt", "F"], run: () => void format() },
-      { id: "wrap", group: "Actions", label: preferences.wrap ? "Disable wrapping" : "Wrap long lines", icon: "wrap", run: () => update({ wrap: !preferences.wrap }) },
-      { id: "inspector", group: "Actions", label: preferences.inspectorOpen ? "Hide inspector" : "Show inspector", icon: "inspector", shortcut: ["Mod", "."], run: () => update({ inspectorOpen: !preferences.inspectorOpen }) },
-      { id: "sidebar", group: "Actions", label: "Toggle sidebar", icon: "sidebar", shortcut: ["Mod", "B"], run: toggleNav },
+      {
+        id: "format",
+        group: "Actions",
+        label: "Format SQL",
+        icon: "format",
+        shortcut: ["Shift", "Alt", "F"],
+        run: () => void format(),
+      },
+      {
+        id: "wrap",
+        group: "Actions",
+        label: preferences.wrap ? "Disable wrapping" : "Wrap long lines",
+        icon: "wrap",
+        run: () => update({ wrap: !preferences.wrap }),
+      },
+      {
+        id: "inspector",
+        group: "Actions",
+        label: preferences.inspectorOpen ? "Hide inspector" : "Show inspector",
+        icon: "inspector",
+        shortcut: ["Mod", "."],
+        run: () => update({ inspectorOpen: !preferences.inspectorOpen }),
+      },
+      {
+        id: "sidebar",
+        group: "Actions",
+        label: "Toggle sidebar",
+        icon: "sidebar",
+        shortcut: ["Mod", "B"],
+        run: toggleNav,
+      },
       { id: "new", group: "Actions", label: "Clear editor", icon: "clear", run: clearEditor },
-      { id: "examples", group: "Actions", label: "Browse examples", icon: "library", run: () => setOverlay("examples") },
-      { id: "context", group: "Actions", label: "Edit context", icon: "context", run: () => setOverlay("context") },
-      { id: "settings", group: "Actions", label: "Preferences", icon: "settings", shortcut: ["?"], run: () => setOverlay("settings") },
-      { id: "goto-review", group: "Actions", label: "Go to Review", icon: "review", run: () => setView("review") },
-      { id: "goto-ask", group: "Actions", label: "Go to Ask", icon: "ask", run: () => setView("ask") },
-      { id: "export-md", group: "Actions", label: "Export Markdown", icon: "download", run: () => exportReview("md") },
-      { id: "export-json", group: "Actions", label: "Export JSON", icon: "download", run: () => exportReview("json") },
+      {
+        id: "examples",
+        group: "Actions",
+        label: "Browse examples",
+        icon: "library",
+        run: () => setOverlay("examples"),
+      },
+      {
+        id: "context",
+        group: "Actions",
+        label: "Edit context",
+        icon: "context",
+        run: () => setOverlay("context"),
+      },
+      {
+        id: "settings",
+        group: "Actions",
+        label: "Preferences",
+        icon: "settings",
+        shortcut: ["?"],
+        run: () => setOverlay("settings"),
+      },
+      {
+        id: "goto-review",
+        group: "Actions",
+        label: "Go to Review",
+        icon: "review",
+        run: () => setView("review"),
+      },
+      {
+        id: "goto-ask",
+        group: "Actions",
+        label: "Go to Ask",
+        icon: "ask",
+        run: () => setView("ask"),
+      },
+      {
+        id: "export-md",
+        group: "Actions",
+        label: "Export Markdown",
+        icon: "download",
+        run: () => exportReview("md"),
+      },
+      {
+        id: "export-json",
+        group: "Actions",
+        label: "Export JSON",
+        icon: "download",
+        run: () => exportReview("json"),
+      },
       {
         id: "theme",
         group: "Actions",
@@ -253,7 +340,16 @@ export function AppShell() {
       run: () => openReview(record),
     }));
     return [...actions, ...examples, ...recents];
-  }, [history, openReview, preferences.inspectorOpen, preferences.wrap, resolvedTheme, startReview, toggleNav, update]);
+  }, [
+    history,
+    openReview,
+    preferences.inspectorOpen,
+    preferences.wrap,
+    resolvedTheme,
+    startReview,
+    toggleNav,
+    update,
+  ]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -312,7 +408,14 @@ export function AppShell() {
 
   return (
     <div className={styles.shell}>
-      {mobile && navOpen ? <button type="button" className={styles.scrim} aria-label="Close sidebar" onClick={() => setNavOpen(false)} /> : null}
+      {mobile && navOpen ? (
+        <button
+          type="button"
+          className={styles.scrim}
+          aria-label="Close sidebar"
+          onClick={() => setNavOpen(false)}
+        />
+      ) : null}
       <NavSidebar
         view={view}
         collapsed={navCollapsed}
@@ -341,7 +444,11 @@ export function AppShell() {
             <IconButton icon="menu" label="Open sidebar" onClick={() => setNavOpen(true)} />
             <Logo size={16} />
             <span className={styles.grow} />
-            <IconButton icon="search" label="Command palette" onClick={() => setOverlay("palette")} />
+            <IconButton
+              icon="search"
+              label="Command palette"
+              onClick={() => setOverlay("palette")}
+            />
             {view === "review" ? (
               <IconButton
                 icon="inspector"
@@ -420,7 +527,11 @@ export function AppShell() {
             <div className={styles.sheet}>
               <header className={styles.sheetBar}>
                 <span>Inspector</span>
-                <IconButton icon="x" label="Close inspector" onClick={() => update({ inspectorOpen: false })} />
+                <IconButton
+                  icon="x"
+                  label="Close inspector"
+                  onClick={() => update({ inspectorOpen: false })}
+                />
               </header>
               {inspector}
             </div>
@@ -438,7 +549,12 @@ export function AppShell() {
         }}
         onRun={(sql) => startReview(sql)}
       />
-      <ContextModal open={overlay === "context"} entries={knowledge} onClose={closeOverlay} onChange={persistKnowledge} />
+      <ContextModal
+        open={overlay === "context"}
+        entries={knowledge}
+        onClose={closeOverlay}
+        onChange={persistKnowledge}
+      />
       <SettingsModal
         open={overlay === "settings"}
         preferences={preferences}

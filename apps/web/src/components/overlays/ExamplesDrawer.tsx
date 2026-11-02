@@ -2,7 +2,12 @@
 
 import { useMemo, useState } from "react";
 
-import { EXAMPLE_CATEGORIES, EXAMPLES, type ExampleCategory, type ExampleMigration } from "../../lib/examples";
+import {
+  EXAMPLE_CATEGORIES,
+  EXAMPLES,
+  type ExampleCategory,
+  type ExampleMigration,
+} from "../../lib/examples";
 import { Button } from "../ui/Button";
 import { CodeBlock } from "../ui/CodeBlock";
 import { Dialog } from "../ui/Dialog";
@@ -48,7 +53,11 @@ export function ExamplesDrawer({ open, onClose, onInsert, onRun }: ExamplesDrawe
             />
           </label>
           <div className={styles.filters} role="tablist" aria-label="Example category">
-            <FilterChip label="All" active={category === "all"} onClick={() => setCategory("all")} />
+            <FilterChip
+              label="All"
+              active={category === "all"}
+              onClick={() => setCategory("all")}
+            />
             {EXAMPLE_CATEGORIES.map((entry) => (
               <FilterChip
                 key={entry}
@@ -75,15 +84,31 @@ export function ExamplesDrawer({ open, onClose, onInsert, onRun }: ExamplesDrawe
             />
           ))}
         </ul>
-        {visible.length === 0 ? <p className={styles.empty}>No examples match that filter.</p> : null}
+        {visible.length === 0 ? (
+          <p className={styles.empty}>No examples match that filter.</p>
+        ) : null}
       </div>
     </Dialog>
   );
 }
 
-function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function FilterChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
-    <button type="button" role="tab" aria-selected={active} className={styles.chip} onClick={onClick}>
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      className={styles.chip}
+      onClick={onClick}
+    >
       {label}
     </button>
   );

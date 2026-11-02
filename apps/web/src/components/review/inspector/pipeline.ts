@@ -64,7 +64,9 @@ export function statusText(record: ReviewRecord): string {
       if (isParserRejection(record)) {
         return "The parser rejected this migration";
       }
-      return record.failure === "connection" ? "Lost the connection to the Worker" : "The review did not finish";
+      return record.failure === "connection"
+        ? "Lost the connection to the Worker"
+        : "The review did not finish";
     case "completed":
       return "Completed";
   }

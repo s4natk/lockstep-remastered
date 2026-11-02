@@ -54,7 +54,9 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
   }, [query]);
 
   useEffect(() => {
-    list.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
+    list.current
+      ?.querySelector<HTMLElement>(`[data-index="${active}"]`)
+      ?.scrollIntoView({ block: "nearest" });
   }, [active]);
 
   if (!open || typeof document === "undefined") {
@@ -137,7 +139,13 @@ function rankCommands(commands: Command[], query: string): Command[] {
     return commands;
   }
   return commands
-    .map((command) => ({ command, score: score(`${command.label} ${command.hint ?? ""} ${command.keywords ?? ""} ${command.group}`, needle) }))
+    .map((command) => ({
+      command,
+      score: score(
+        `${command.label} ${command.hint ?? ""} ${command.keywords ?? ""} ${command.group}`,
+        needle,
+      ),
+    }))
     .filter((entry) => entry.score > 0)
     .sort((left, right) => right.score - left.score)
     .map((entry) => entry.command);

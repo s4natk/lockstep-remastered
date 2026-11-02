@@ -1,4 +1,11 @@
-import type { Citation, CitationKind, Hazard, HazardCode, ParseResult, ParsedStatement } from "@lockstep/shared";
+import type {
+  Citation,
+  CitationKind,
+  Hazard,
+  HazardCode,
+  ParseResult,
+  ParsedStatement,
+} from "@lockstep/shared";
 
 import { isRecord } from "./storage";
 
@@ -55,7 +62,9 @@ export function parseServerEvent(raw: string): ServerEvent | null {
       return result === null ? null : { type: "parse", result };
     }
     case "token":
-      return typeof message.content === "string" ? { type: "token", content: message.content } : null;
+      return typeof message.content === "string"
+        ? { type: "token", content: message.content }
+        : null;
     case "done":
       if (typeof message.note === "string") {
         return {
@@ -152,5 +161,7 @@ export function readTrace(value: unknown): TraceSpan[] {
 }
 
 export function readStrings(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
 }
