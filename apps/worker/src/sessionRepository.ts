@@ -33,19 +33,42 @@ interface SessionRow {
   trace_json: string | null;
 }
 
-const COLUMNS =
-  "id, created_at, sql, note, parse_json, citations_json, trace_json";
+const COLUMNS = "id, created_at, sql, note, parse_json, citations_json, trace_json";
 
 export class SessionRepository {
   constructor(private readonly db: Env["DB"]) {}
 
+  async claimOwner(id: string, ownerHash: string): Promise<boolean> {
+    await this.ensureOwnerSchema();
+    await this.db
+      .prepare("INSERT OR IGNORE INTO session_owners(id, owner_hash) VALUES (?, ?)")
+      .bind(id, ownerHash)
+      .run();
+    return this.hasOwner(id, ownerHash);
+  }
+
+  async hasOwner(id: string, ownerHash: string): Promise<boolean> {
+    await this.ensureOwnerSchema();
+    return (
+      (await this.db
+        .prepare("SELECT id FROM session_owners WHERE id = ? AND owner_hash = ?")
+        .bind(id, ownerHash)
+        .first()) !== null
+    );
+  }
+
+  private async ensureOwnerSchema(): Promise<void> {
+    await this.db
+      .prepare(
+        "CREATE TABLE IF NOT EXISTS session_owners(id TEXT PRIMARY KEY, owner_hash TEXT NOT NULL)",
+      )
+      .run();
+  }
   async insert(session: NewSession): Promise<void> {
     await this.ensureSchema();
     const createdAt = session.createdAt ?? new Date().toISOString();
     await this.db
-      .prepare(
-        `INSERT OR REPLACE INTO sessions (${COLUMNS}) VALUES (?, ?, ?, NULL, ?, NULL, NULL)`,
-      )
+      .prepare(`INSERT OR REPLACE INTO sessions (${COLUMNS}) VALUES (?, ?, ?, NULL, ?, NULL, NULL)`)
       .bind(session.id, createdAt, session.sql, session.parseJson)
       .run();
   }
