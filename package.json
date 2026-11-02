@@ -1,5 +1,5 @@
 {
-  "name": "lockstep",
+  "name": "lockstep-remastered",
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "engines": {
@@ -8,8 +8,21 @@
   "scripts": {
     "dev:worker": "pnpm --filter @lockstep/worker dev",
     "dev:web": "pnpm --filter @lockstep/web dev",
-    "test": "pnpm --filter @lockstep/worker test",
+    "test": "pnpm --filter @lockstep/worker test && pnpm --filter @lockstep/web test",
     "typecheck": "pnpm -r --if-present typecheck",
-    "eval:retrieval": "pnpm --filter @lockstep/worker eval:retrieval"
+    "eval:retrieval": "pnpm --filter @lockstep/worker eval:retrieval",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "pnpm --filter @lockstep/web build",
+    "test:e2e": "playwright test",
+    "test:rust": "cargo test --locked --manifest-path packages/sql_guard/Cargo.toml"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
+    "eslint": "^10.14.0",
+    "prettier": "^3.9.10",
+    "typescript-eslint": "^8.72.1"
   }
 }
