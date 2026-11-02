@@ -5,3 +5,5 @@ export type { RunbookChunk, RunbookQuestion } from "./runbook.js";
 export * from "./investigation.js";
 
 export * from "./validation.js";
+
+export * from "./classify.js";
