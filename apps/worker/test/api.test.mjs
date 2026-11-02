@@ -1,9 +1,11 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { unstable_dev } from "wrangler";
 
 const worker = await unstable_dev("src/index.ts", {
   config: "wrangler.toml",
   local: true,
+  vars: { OPENAI_API_KEY: "" },
   experimental: {
     disableExperimentalWarning: true,
     forceLocal: true,
@@ -66,6 +68,37 @@ try {
   assert.equal(result.hazards[0].code, "data_loss");
   assert.equal(result.hazards[0].statementIndex, 0);
 
+  const migrationDirectory = new URL("../../../eval/migrations/", import.meta.url);
+  const labels = JSON.parse(await readFile(new URL("labels.json", migrationDirectory), "utf8"));
+  for (const [filename, expected] of Object.entries(labels)) {
+    const sql = await readFile(new URL(filename, migrationDirectory), "utf8");
+    const response = await worker.fetch("http://localhost/api/parse", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sql }),
+    });
+    assert.equal(response.status, 200, filename);
+    const actual = await response.json();
+    assert.equal(actual.statements.length, expected.statements.length, filename);
+    for (const statement of expected.statements) {
+      const hazards = actual.hazards.filter((hazard) => hazard.statementIndex === statement.index);
+      if (statement.code === "safe") {
+        assert.equal(hazards.length, 0, `${filename}: statement ${statement.index} should be safe`);
+      } else {
+        assert.ok(
+          hazards.length > 0,
+          `${filename}: statement ${statement.index} should emit a hazard`,
+        );
+        assert.ok(
+          hazards.every((hazard) => hazard.code === statement.code),
+          `${filename}: expected ${statement.code}`,
+        );
+      }
+    }
+  }
+  console.log(
+    `Rust/WASM API parity: ${Object.keys(labels).length} labeled migration fixtures passed`,
+  );
   const invalid = await worker.fetch("http://localhost/api/parse", {
     method: "POST",
     headers: { "content-type": "application/json" },

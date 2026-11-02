@@ -161,7 +161,10 @@ mod tests {
         assert_eq!(statements[0].sql, sql);
         assert_eq!(statements[0].start, 0);
         assert_eq!(statements[0].end, sql.len());
-        assert_eq!(&sql[statements[0].start..statements[0].end], statements[0].sql);
+        assert_eq!(
+            &sql[statements[0].start..statements[0].end],
+            statements[0].sql
+        );
     }
 
     #[test]
@@ -187,7 +190,10 @@ mod tests {
         let sql = "SELECT 1;\nSELECT 2";
         let statements = split_statements(sql).unwrap();
         assert_eq!(
-            statements.iter().map(|statement| statement.sql.as_str()).collect::<Vec<_>>(),
+            statements
+                .iter()
+                .map(|statement| statement.sql.as_str())
+                .collect::<Vec<_>>(),
             vec!["SELECT 1", "SELECT 2"]
         );
     }

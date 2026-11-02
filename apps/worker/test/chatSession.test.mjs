@@ -1,9 +1,10 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { unstable_dev } from "wrangler";
 
 const worker = await unstable_dev("src/index.ts", {
   config: "wrangler.toml",
   local: true,
+  vars: { OPENAI_API_KEY: "" },
   experimental: {
     disableExperimentalWarning: true,
     forceLocal: true,

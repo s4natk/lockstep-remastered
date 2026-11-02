@@ -1,9 +1,10 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { unstable_dev } from "wrangler";
 
 const worker = await unstable_dev("src/index.ts", {
   config: "wrangler.toml",
   local: true,
+  vars: { OPENAI_API_KEY: "" },
   experimental: { disableExperimentalWarning: true, forceLocal: true },
 });
 const key = "integration_owner_" + "a".repeat(32);
@@ -35,7 +36,7 @@ try {
   assert.equal(malformed.status, 400);
   const oversized = await submit("x".repeat(70_000));
   assert.equal(oversized.status, 413);
-  const unicodeOversized = await submit("🧭".repeat(17_000));
+  const unicodeOversized = await submit("ðŸ§­".repeat(17_000));
   assert.equal(unicodeOversized.status, 413);
   const cases = [
     [

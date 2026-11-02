@@ -1,16 +1,15 @@
-import {
+﻿import {
   isInvestigationReport,
   type FailureKind,
   type InvestigationReport,
   type InvestigationStatus,
+  type InvestigationSession,
 } from "@lockstep/shared";
 
-export interface InvestigationHistoryItem {
-  id: string;
-  kind: FailureKind;
-  summary: string;
-  status: InvestigationStatus;
-  createdAt: string;
+export interface InvestigationHistoryItem extends Pick<
+  InvestigationSession,
+  "id" | "kind" | "summary" | "status" | "createdAt"
+> {
   mode: "ai" | "deterministic" | null;
 }
 interface InvestigationRow {

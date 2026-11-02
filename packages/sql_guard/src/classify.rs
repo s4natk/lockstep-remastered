@@ -62,11 +62,10 @@ pub fn classify_migration(sql: &str) -> Result<ParseResult, ParseError> {
 }
 
 fn classify_statement(statement: &ParsedStatement) -> Result<Vec<Hazard>, ParseError> {
-    let parsed = Parser::parse_sql(&PostgreSqlDialect {}, &statement.sql).map_err(|err| {
-        ParseError {
+    let parsed =
+        Parser::parse_sql(&PostgreSqlDialect {}, &statement.sql).map_err(|err| ParseError {
             message: err.to_string(),
-        }
-    })?;
+        })?;
     let Some(ast) = parsed.first() else {
         return Err(ParseError {
             message: "expected one statement".to_string(),
@@ -114,8 +113,9 @@ fn alter_operation_hazard(
             HazardCode::DataLoss,
             "DROP COLUMN deletes stored values.",
         )),
-        AlterTableOperation::AddColumn { column_def, .. } => add_column_hazard(column_def)
-            .map(|(code, reason)| hazard(statement, code, reason)),
+        AlterTableOperation::AddColumn { column_def, .. } => {
+            add_column_hazard(column_def).map(|(code, reason)| hazard(statement, code, reason))
+        }
         AlterTableOperation::AlterColumn { op, .. } => match op {
             AlterColumnOperation::SetNotNull => Some(hazard(
                 statement,
@@ -221,8 +221,7 @@ mod tests {
 
     #[test]
     fn alter_column_type_is_a_rewrite() {
-        let parsed =
-            classify_migration("ALTER TABLE users ALTER COLUMN age TYPE bigint").unwrap();
+        let parsed = classify_migration("ALTER TABLE users ALTER COLUMN age TYPE bigint").unwrap();
         assert_eq!(parsed.hazards.len(), 1);
         assert_eq!(parsed.hazards[0].code, HazardCode::Rewrite);
         assert_eq!(

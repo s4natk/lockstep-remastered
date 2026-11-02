@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "dev:worker": "pnpm --filter @lockstep/worker dev",
@@ -16,13 +16,18 @@
     "format:check": "prettier --check .",
     "build": "pnpm --filter @lockstep/web build",
     "test:e2e": "playwright test",
-    "test:rust": "cargo test --locked --manifest-path packages/sql_guard/Cargo.toml"
+    "test:rust": "cargo test --locked --manifest-path packages/sql_guard/Cargo.toml",
+    "eval:investigations": "pnpm --filter @lockstep/worker eval:investigations",
+    "security:scan": "node scripts/audit-repository.mjs",
+    "release:audit": "node scripts/audit-repository.mjs --release"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.1",
+    "@secretlint/secretlint-rule-preset-recommend": "^13.1.0",
     "eslint": "^10.14.0",
     "prettier": "^3.9.10",
+    "secretlint": "^13.1.0",
     "typescript-eslint": "^8.72.1"
   }
 }
