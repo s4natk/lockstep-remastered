@@ -18,7 +18,7 @@ import { AgentMark, Icon, CopyControl, SidePanel } from "./Primitives";
 import { RichText } from "./RichText";
 import { ReportPanel } from "./ReportPanel";
 import { KnowledgePanel } from "./KnowledgePanel";
-import { ServiceStatus, ResponseMode, FallbackNotice } from "./ResponseStatus";
+import { ResponseMode, FallbackNotice } from "./ResponseStatus";
 import { TracePreview } from "./TracePreview";
 const exampleCards = [
   {
@@ -219,7 +219,15 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
           <Icon name="help" />
           How Lockstep works
         </Link>
-        <ServiceStatus connection={state.connection} report={report} />
+        <a
+          className="ls-credit"
+          href="https://github.com/s4natk/lockstep-remastered"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Icon name="git" size={16} />
+          made by <strong>@s4natk</strong>
+        </a>
         <p className="ls-private-note">
           <Icon name="shield" size={13} />
           Private to this browser’s access key.

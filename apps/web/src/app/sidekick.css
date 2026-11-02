@@ -627,47 +627,32 @@ option {
   padding-top: 12px;
   border-top: 1px solid var(--ls-line);
 }
-.ls-service-status {
+.ls-credit {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
   margin: 12px 2px 0;
-  padding: 12px;
+  padding: 11px 12px;
   border-radius: 12px;
   border: 1px solid var(--ls-line);
   background: var(--ls-surface);
   font-size: 13px;
-  font-weight: 500;
+  color: var(--ls-text-2);
+  transition:
+    border-color 160ms,
+    color 160ms;
+}
+.ls-credit svg {
+  flex: none;
   color: var(--ls-text);
 }
-.ls-service-status small {
-  display: block;
-  margin-top: 2px;
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.5;
-  color: var(--ls-muted);
+.ls-credit strong {
+  font-weight: 650;
+  color: var(--ls-cyan);
 }
-.ls-service-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  margin-top: 6px;
-  border-radius: 50%;
-  background: var(--ls-muted);
-}
-.ls-service-status[data-state="checking"] .ls-service-dot {
-  animation: ls-blink 1s ease-in-out infinite;
-}
-.ls-service-status[data-state="ai"] .ls-service-dot {
-  background: var(--ls-cyan);
-  animation: ls-ping 2s ease-out infinite;
-}
-.ls-service-status[data-state="evidence"] .ls-service-dot {
-  background: var(--ls-amber);
-}
-.ls-service-status[data-state="offline"] .ls-service-dot {
-  background: var(--ls-rose);
+.ls-credit:hover {
+  border-color: rgba(61, 214, 245, 0.45);
+  color: var(--ls-text-strong);
 }
 .ls-private-note {
   display: flex;
@@ -3789,7 +3774,6 @@ option {
   .ls-new-thread::after,
   .ls-welcome-mark .ls-overline::before,
   .ls-thread-running,
-  .ls-service-dot,
   .ls-provisional-label::before,
   .ls-send.ls-stop,
   .ls-loading-shell > span:last-child,

@@ -25,7 +25,8 @@ export type IconName =
   | "database"
   | "arrowRight"
   | "chevron"
-  | "shield";
+  | "shield"
+  | "git";
 const paths: Record<IconName, string> = {
   plus: "M10 4v12M4 10h12",
   message: "M4 4h12v9H9l-5 3V4Z",
@@ -54,6 +55,7 @@ const paths: Record<IconName, string> = {
   arrowRight: "M4 10h12m-5-5 5 5-5 5",
   chevron: "m5 8 5 5 5-5",
   shield: "M10 2.5 4 5v4.5c0 3.9 2.6 6.6 6 8 3.4-1.4 6-4.1 6-8V5l-6-2.5Z",
+  git: "M6.2 3.4a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4Zm0 9.8a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4ZM6.2 6.8v6.4M14.6 5.6a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4ZM8 12.4h4.6a2 2 0 0 0 2-2V9",
 };
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   return (
