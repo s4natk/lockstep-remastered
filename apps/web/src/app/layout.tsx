@@ -5,7 +5,7 @@ import "./sidekick.css";
 const sans = Inter({ subsets: ["latin"], variable: "--ls-font-sans", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--ls-font-mono", display: "swap" });
 export const metadata: Metadata = {
-  title: { default: "Lockstep — Your debugging workspace", template: "%s · Lockstep" },
+  title: "Lockstep",
   description:
     "An investigation partner for errors, failed tests, API failures, logs, and SQL. Keep the conversation, context, and evidence together.",
   applicationName: "Lockstep",
