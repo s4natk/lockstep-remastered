@@ -26,7 +26,10 @@ export type IconName =
   | "arrowRight"
   | "chevron"
   | "shield"
-  | "git";
+  | "git"
+  | "compose"
+  | "alert"
+  | "corner";
 const paths: Record<IconName, string> = {
   plus: "M10 4v12M4 10h12",
   message: "M4 4h12v9H9l-5 3V4Z",
@@ -56,6 +59,10 @@ const paths: Record<IconName, string> = {
   chevron: "m5 8 5 5 5-5",
   shield: "M10 2.5 4 5v4.5c0 3.9 2.6 6.6 6 8 3.4-1.4 6-4.1 6-8V5l-6-2.5Z",
   git: "M6.2 3.4a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4Zm0 9.8a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4ZM6.2 6.8v6.4M14.6 5.6a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4ZM8 12.4h4.6a2 2 0 0 0 2-2V9",
+  compose:
+    "M9 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16h9a1.5 1.5 0 0 0 1.5-1.5V11M14.3 3.7a1.7 1.7 0 0 1 2.4 2.4l-6.2 6.2-3 .7.7-3 6.1-6.3Z",
+  alert: "M10 6.5V11m0 2.8v.1M10 2.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15Z",
+  corner: "M5 4v6a3 3 0 0 0 3 3h7m-3-3 3 3-3 3",
 };
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   return (
@@ -84,7 +91,7 @@ export function AgentMark({ size = 30, motion }: { size?: number; motion?: "intr
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <svg viewBox="0 0 40 40" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="6 6 28 28" fill="none" strokeLinecap="round" strokeLinejoin="round">
         <path className="ls-mark-trail" d={MARK_TRAIL} pathLength={1} />
         <path className="ls-mark-comet" d={MARK_TRAIL} pathLength={1} />
         <path className="ls-mark-lead" d={MARK_LEAD} pathLength={1} />
@@ -117,13 +124,11 @@ async function copy(text: string, setCopied: (value: boolean) => void) {
 }
 export function SidePanel({
   title,
-  eyebrow,
   children,
   onClose,
   side = "right",
 }: {
   title: string;
-  eyebrow: string;
   children: ReactNode;
   onClose: () => void;
   side?: "left" | "right";
@@ -186,10 +191,7 @@ export function SidePanel({
         }}
       >
         <header className="ls-panel-head">
-          <div>
-            <span className="ls-overline">{eyebrow}</span>
-            <h2>{title}</h2>
-          </div>
+          <h2>{title}</h2>
           <button
             type="button"
             className="ls-icon-button"

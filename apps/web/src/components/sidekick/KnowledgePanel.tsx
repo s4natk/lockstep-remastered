@@ -96,7 +96,7 @@ export function KnowledgePanel({
     }
   };
   return (
-    <SidePanel title="Your context" eyebrow="PRIVATE KNOWLEDGE LIBRARY" onClose={onClose}>
+    <SidePanel title="Knowledge library" onClose={onClose}>
       <p className="ls-panel-lede">
         Bring the code, docs, and runbooks that make this incident yours. Pin up to 12 sources to
         always include in this thread. Other saved knowledge can be retrieved when relevant.
@@ -213,7 +213,7 @@ export function KnowledgePanel({
       ) : null}
       {documents.length === 0 && !editing ? (
         <div className="ls-panel-empty">
-          <Icon name="book" size={32} />
+          <Icon name="book" size={22} />
           <h3>Context changes the conversation.</h3>
           <p>
             Save a relevant runbook or code excerpt. It remains private to this browser’s access

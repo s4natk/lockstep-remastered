@@ -1,7 +1,14 @@
 "use client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+} from "react";
 import {
   FAILURE_KINDS,
   SIDEKICK_LIMITS,
@@ -19,53 +26,63 @@ import { RichText } from "./RichText";
 import { ReportPanel } from "./ReportPanel";
 import { KnowledgePanel } from "./KnowledgePanel";
 import { ResponseMode, FallbackNotice } from "./ResponseStatus";
-import { TracePreview } from "./TracePreview";
-const exampleCards = [
+const suggestions = [
   {
     id: "python",
-    icon: "bug" as const,
-    tone: "rose",
     title: "Trace an exception",
     detail: "Follow the failing value through a stack trace",
   },
   {
     id: "test",
-    icon: "flask" as const,
-    tone: "amber",
     title: "Unblock a failing test",
     detail: "Compare the expectation with what happened",
   },
   {
     id: "http",
-    icon: "pulse" as const,
-    tone: "cyan",
     title: "Investigate an API error",
     detail: "Make sense of responses, limits, and timeouts",
   },
   {
     id: "sql",
-    icon: "database" as const,
-    tone: "violet",
     title: "Review a SQL migration",
     detail: "Find risky changes before they reach production",
   },
 ];
+const followUps = [
+  "What should I check first?",
+  "How can I verify the fix?",
+  "What other causes fit?",
+];
 const workflow = [
+  { title: "Normalize", text: "Parse the failure and preserve its evidence." },
+  { title: "Retrieve", text: "Search runbooks and your saved context." },
+  { title: "Investigate", text: "Reason with a model or deterministic guidance." },
+  { title: "Validate", text: "Check the report and its source references." },
+];
+const guide = [
   {
-    icon: "code" as const,
-    title: "Normalize",
-    text: "Parse the failure and preserve its evidence.",
+    title: "One thread. The whole problem.",
+    text: "Paste a runtime exception, failed test, HTTP response, logs, database error, or SQL migration. Follow up with code, questions, or new evidence. Each turn keeps the incident’s conversation and selected sources available.",
   },
-  { icon: "book" as const, title: "Retrieve", text: "Search runbooks and your saved context." },
   {
-    icon: "search" as const,
-    title: "Investigate",
-    text: "Reason with a model or deterministic guidance.",
+    title: "Bring context that belongs to your system.",
+    text: "Save UTF-8 docs, code, logs, or notes in your private knowledge library. Select up to 12 sources for a thread. Keyword retrieval works without vector infrastructure; semantic retrieval is optional and labelled when available.",
   },
   {
-    icon: "check" as const,
-    title: "Validate",
-    text: "Check the report and its source references.",
+    title: "Watch the work, then check the evidence.",
+    text: "Progress follows actual parsing, retrieval, and validation stages. Any streaming draft is provisional. The final response replaces it after validation; the evidence panel links findings to their sources. A valid reference identifies evidence, not proof of a claim.",
+  },
+  {
+    title: "Useful even when AI is unavailable.",
+    text: "Deterministic mode uses parsed evidence and curated guidance. AI responses require a successful provider request. Each reply shows the mode actually used, with missing context and limitations available in its report.",
+  },
+  {
+    title: "A workspace you can return to.",
+    text: "Threads and knowledge are saved by the backend under a browser-generated access key. Clearing browser storage loses access. Export a thread or report before clearing storage; delete unwanted threads and sources from their library views.",
+  },
+  {
+    title: "Your code stays data.",
+    text: "Lockstep never executes your submitted code, SQL, or shell commands. Remove credentials and personal information before submitting. Input and selected context are sent to the backend and, when enabled, the model provider. Verify every suggested change in your own environment.",
   },
 ];
 const stagger = (index: number) => ({ "--i": index }) as CSSProperties;
@@ -99,18 +116,41 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const formTop = useRef<number | null>(null);
+  const dock = useRef<Animation | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
   const report = latestReport(state.thread);
   const running = state.busy || state.thread?.status === "running";
-  useEffect(() => {
+  const messages = state.thread?.messages ?? [];
+  const opening = Boolean(threadId) && state.thread?.id !== threadId && !state.error;
+  const empty = !running && !state.loading && !opening && messages.length === 0;
+  const live = state.busy && state.thread?.status !== "idle";
+  useLayoutEffect(() => {
     const node = composerRef.current;
     if (node) {
       node.style.height = "auto";
       node.style.height = `${Math.min(node.scrollHeight, 210)}px`;
     }
   }, [draft]);
+  // The composer moves between the centered welcome and the bottom of the thread.
+  useLayoutEffect(() => {
+    const node = formRef.current;
+    const previous = formTop.current;
+    if (!node || previous === null) return;
+    dock.current?.cancel();
+    const offset = previous - node.getBoundingClientRect().top;
+    if (Math.abs(offset) > 2)
+      dock.current = node.animate(
+        [{ transform: `translateY(${offset}px)` }, { transform: "translateY(0)" }],
+        { duration: 560, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+      );
+  }, [empty]);
+  useLayoutEffect(() => {
+    formTop.current = formRef.current?.getBoundingClientRect().top ?? null;
+  });
   useEffect(() => {
     if (nearBottom.current && state.thread?.messages.length)
       bottomRef.current?.scrollIntoView({ block: "end" });
@@ -136,22 +176,27 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
       return;
     }
     nearBottom.current = true;
-    const sent = await state.send(draft, category === "auto" ? undefined : category, context);
-    if (sent) setDraft("");
+    const message = draft;
+    setDraft("");
+    const sent = await state.send(message, category === "auto" ? undefined : category, context);
+    if (!sent) setDraft((current) => current || message);
   };
   const openReport = (value: InvestigationReport | null, tab: "evidence" | "report") => {
     setPanelReport(value);
     setPanel(tab);
   };
   const sourceCount = report?.evidence.length ?? 0;
+  const title =
+    view === "history"
+      ? "History"
+      : view === "help"
+        ? "How it works"
+        : (state.thread?.title ?? "New investigation");
   const railContent = (
     <>
       <Link className="ls-brand" href="/" aria-label="Lockstep workspace">
-        <AgentMark size={36} />
-        <span>
-          lockstep<span className="ls-brand-dot">.</span>
-          <small>DEBUGGING, TOGETHER.</small>
-        </span>
+        <AgentMark size={22} />
+        <span>Lockstep</span>
       </Link>
       <Link
         className="ls-new-thread"
@@ -159,8 +204,8 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
         href="/investigate"
         onClick={() => setMenuOpen(false)}
       >
-        <Icon name="plus" />
-        New investigation<kbd>↗</kbd>
+        <Icon name="compose" />
+        New investigation
       </Link>
       <nav className="ls-rail-nav" aria-label="Workspace navigation">
         <Link
@@ -182,32 +227,28 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
           Knowledge library<span>{state.documents.length || ""}</span>
         </button>
       </nav>
-      <div className="ls-recent-label">
-        <span>RECENT THREADS</span>
-        <Icon name="message" size={13} />
-      </div>
+      <p className="ls-recent-label">Recent</p>
       <div className="ls-recent-threads">
         {state.threads.length ? (
-          state.threads.slice(0, 15).map((item) => (
+          state.threads.slice(0, 15).map((item, index) => (
             <Link
               key={item.id}
               href={`/investigate?thread=${encodeURIComponent(item.id)}`}
               aria-current={threadId === item.id ? "page" : undefined}
               onClick={() => setMenuOpen(false)}
+              style={stagger(index)}
             >
-              <span
-                className={`ls-thread-dot ${item.status === "running" ? "ls-thread-running" : ""}`}
-              />
               <span>{item.title}</span>
-              {item.status === "running" ? <span className="ls-sr-only">In progress</span> : null}
+              {item.status === "running" ? (
+                <>
+                  <span className="ls-thread-running" aria-hidden="true" />
+                  <span className="ls-sr-only">In progress</span>
+                </>
+              ) : null}
             </Link>
           ))
         ) : (
-          <p>
-            Your investigations will live here.
-            <br />
-            Start with an error or a question.
-          </p>
+          <p>Your investigations will live here. Start with an error or a question.</p>
         )}
       </div>
       <div className="ls-rail-bottom">
@@ -228,10 +269,6 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
           <Icon name="git" size={16} />
           made by <strong>@s4natk</strong>
         </a>
-        <p className="ls-private-note">
-          <Icon name="shield" size={13} />
-          Private to this browser’s access key.
-        </p>
       </div>
     </>
   );
@@ -244,12 +281,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
         {railContent}
       </aside>
       {menuOpen ? (
-        <SidePanel
-          title="Workspace"
-          eyebrow="LOCKSTEP"
-          side="left"
-          onClose={() => setMenuOpen(false)}
-        >
+        <SidePanel title="Workspace" side="left" onClose={() => setMenuOpen(false)}>
           <div className="ls-mobile-rail">{railContent}</div>
         </SidePanel>
       ) : null}
@@ -263,19 +295,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
           >
             <Icon name="menu" />
           </button>
-          <div className="ls-thread-heading">
-            <span className="ls-breadcrumb">
-              WORKSPACE <span>/</span>{" "}
-              {view === "history" ? "HISTORY" : view === "help" ? "GUIDE" : "INVESTIGATION"}
-            </span>
-            <h1>
-              {view === "history"
-                ? "Your investigations"
-                : view === "help"
-                  ? "A little clarity on how this works."
-                  : (state.thread?.title ?? "New investigation")}
-            </h1>
-          </div>
+          <h1 key={title}>{title}</h1>
           <div className="ls-topbar-actions">
             <button type="button" className="ls-utility" onClick={() => setPanel("context")}>
               <Icon name="book" />
@@ -293,17 +313,36 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                 {sourceCount ? <b>{sourceCount}</b> : null}
               </button>
             ) : null}
+            {state.thread && view === "agent" ? (
+              <button
+                className="ls-icon-button"
+                type="button"
+                onClick={() =>
+                  downloadFile(
+                    `lockstep-thread-${state.thread!.id}.json`,
+                    JSON.stringify(state.thread, null, 2),
+                    "application/json",
+                  )
+                }
+                aria-label="Export conversation"
+                title="Export conversation"
+              >
+                <Icon name="download" />
+              </button>
+            ) : null}
           </div>
         </header>
-        <main className="ls-main" id="conversation-main">
-          {state.busy ? <div className="ls-progress" aria-hidden="true" /> : null}
+        <main
+          className="ls-main"
+          id="conversation-main"
+          data-empty={view === "agent" && empty ? true : undefined}
+        >
           {view === "history" ? (
             <div className="ls-history-view">
               <div className="ls-page-heading">
                 <div>
-                  <span className="ls-overline">THE WORK SO FAR</span>
-                  <h2>Keep the whole investigation.</h2>
-                  <p>Conversations, context, and evidence. Ready when you come back.</p>
+                  <h2>Your investigations</h2>
+                  <p>Conversations, context, and evidence, ready when you come back.</p>
                 </div>
                 <Link className="ls-button ls-button-primary" href="/investigate">
                   <Icon name="plus" />
@@ -317,7 +356,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                     value={historyQuery}
                     onChange={(event) => setHistoryQuery(event.target.value)}
                     aria-label="Search investigations"
-                    placeholder="Find an investigation…"
+                    placeholder="Search investigations"
                   />
                 </label>
                 <button
@@ -339,9 +378,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
               ) : null}
               {state.threads.length === 0 ? (
                 <div className="ls-history-empty">
-                  <span className="ls-history-empty-icon">
-                    <Icon name="message" size={28} />
-                  </span>
+                  <Icon name="message" size={22} />
                   <h3>A fresh page, for now.</h3>
                   <p>Your first investigation will appear here with its full conversation.</p>
                   <Link className="ls-button ls-button-primary" href="/investigate">
@@ -359,9 +396,13 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                     .map((item, index) => (
                       <article key={item.id} style={stagger(index)}>
                         <Link href={`/investigate?thread=${encodeURIComponent(item.id)}`}>
-                          <div>
+                          <h3>{item.title}</h3>
+                          <p>{item.lastPreview || "No messages yet."}</p>
+                          <span className="ls-history-meta">
                             <span className="ls-category-label" data-kind={item.kind}>
-                              {FAILURE_LABELS[item.kind]}
+                              {item.status === "running"
+                                ? "Turn in progress"
+                                : FAILURE_LABELS[item.kind]}
                             </span>
                             <time dateTime={item.updatedAt}>
                               {new Date(item.updatedAt).toLocaleDateString(undefined, {
@@ -369,13 +410,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                                 day: "numeric",
                               })}
                             </time>
-                          </div>
-                          <h3>{item.title}</h3>
-                          <p>{item.lastPreview || "No messages yet."}</p>
-                          <small>
-                            {item.status === "running" ? "Turn in progress" : "Open conversation"}
-                            <Icon name="arrowRight" size={15} />
-                          </small>
+                          </span>
                         </Link>
                         <div className="ls-history-delete">
                           {deleteId === item.id ? (
@@ -433,12 +468,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
             </div>
           ) : view === "help" ? (
             <div className="ls-help-view">
-              <span className="ls-overline">AN INVESTIGATION PARTNER, WITH RECEIPTS.</span>
-              <h2>
-                Start with the failure.
-                <br />
-                <span>Keep asking better questions.</span>
-              </h2>
+              <h2>Start with the failure. Keep asking better questions.</h2>
               <p className="ls-help-intro">
                 Lockstep helps you trace errors, weigh explanations, and choose the next thing to
                 test. The conversation keeps your evidence in reach.
@@ -446,9 +476,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
               <ol className="ls-help-flow" aria-label="How each turn is handled">
                 {workflow.map((step, index) => (
                   <li key={step.title} style={stagger(index)}>
-                    <span>
-                      <Icon name={step.icon} />
-                    </span>
+                    <span>Step {index + 1}</span>
                     <strong>{step.title}</strong>
                     <small>{step.text}</small>
                   </li>
@@ -457,32 +485,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
               <p className="ls-help-flow-note">
                 PostgreSQL migrations add a Rust/WebAssembly hazard analysis before retrieval.
               </p>
-              {[
-                {
-                  title: "One thread. The whole problem.",
-                  text: "Paste a runtime exception, failed test, HTTP response, logs, database error, or SQL migration. Follow up with code, questions, or new evidence. Each turn keeps the incident’s conversation and selected sources available.",
-                },
-                {
-                  title: "Bring context that belongs to your system.",
-                  text: "Save UTF-8 docs, code, logs, or notes in your private knowledge library. Select up to 12 sources for a thread. Keyword retrieval works without vector infrastructure; semantic retrieval is optional and labelled when available.",
-                },
-                {
-                  title: "Watch the work, then check the evidence.",
-                  text: "Progress follows actual parsing, retrieval, and validation stages. Any streaming draft is provisional. The final response replaces it after validation; the evidence panel links findings to their sources. A valid reference identifies evidence, not proof of a claim.",
-                },
-                {
-                  title: "Useful even when AI is unavailable.",
-                  text: "Deterministic mode uses parsed evidence and curated guidance. AI responses require a successful provider request. Each reply shows the mode actually used, with missing context and limitations available in its report.",
-                },
-                {
-                  title: "A workspace you can return to.",
-                  text: "Threads and knowledge are saved by the backend under a browser-generated access key. Clearing browser storage loses access. Export a thread or report before clearing storage; delete unwanted threads and sources from their library views.",
-                },
-                {
-                  title: "Your code stays data.",
-                  text: "Lockstep never executes your submitted code, SQL, or shell commands. Remove credentials and personal information before submitting. Input and selected context are sent to the backend and, when enabled, the model provider. Verify every suggested change in your own environment.",
-                },
-              ].map((item, index) => (
+              {guide.map((item, index) => (
                 <section key={item.title} style={stagger(index)}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
                   <div>
@@ -508,22 +511,14 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                       node.scrollHeight - node.scrollTop - node.clientHeight < 180;
                 }}
               >
-                {state.loading ? (
+                {state.loading || opening ? (
                   <div role="status" className="ls-loading-thread">
                     <span className="ls-spinner" />
                     Opening your investigation…
                   </div>
-                ) : state.thread?.messages.length ? (
+                ) : messages.length ? (
                   <div className="ls-conversation">
-                    <div className="ls-thread-date">
-                      <span />
-                      {new Date(state.thread.createdAt).toLocaleDateString(undefined, {
-                        month: "long",
-                        day: "numeric",
-                      })}
-                      <span />
-                    </div>
-                    {messageKeys(state.thread.messages).map(([key, message]) => (
+                    {messageKeys(messages).map(([key, message]) => (
                       <Message
                         key={key}
                         message={message}
@@ -531,118 +526,51 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                         onReport={openReport}
                       />
                     ))}
-                    {!state.busy && state.thread.status !== "running" ? (
+                    {!running ? (
                       <div className="ls-followups" aria-label="Suggested follow-up questions">
-                        {[
-                          "What should I check first?",
-                          "How can I verify the fix?",
-                          "What other causes fit?",
-                        ].map((text, index) => (
+                        {followUps.map((text, index) => (
                           <button
                             type="button"
                             key={text}
                             style={stagger(index)}
                             onClick={() => fill(text)}
                           >
+                            <Icon name="corner" size={16} />
                             {text}
-                            <span>↗</span>
                           </button>
                         ))}
                       </div>
                     ) : null}
                   </div>
-                ) : (
+                ) : empty ? (
                   <div className="ls-welcome">
-                    <div className="ls-aurora" aria-hidden="true">
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                    <div className="ls-welcome-mark">
-                      <AgentMark size={46} motion="intro" />
-                      <span className="ls-overline">LET’S WORK THE PROBLEM.</span>
-                    </div>
-                    <h2>
-                      What are we
-                      <br />
-                      <span>investigating?</span>
-                    </h2>
+                    <AgentMark size={44} motion="intro" />
+                    <h2>What are we investigating?</h2>
                     <p>
-                      Bring an error, a failing test, or the logs that don’t add up. We’ll follow
-                      the evidence and work out the next step.
+                      Paste an error, a failing test, or logs that don’t add up. Lockstep follows
+                      the evidence to the next step.
                     </p>
-                    <TracePreview />
-                    <div
-                      className="ls-example-grid"
-                      onPointerMove={(event) => {
-                        const card = (event.target as Element).closest<HTMLElement>("button");
-                        if (!card) return;
-                        const box = card.getBoundingClientRect();
-                        card.style.setProperty("--mx", `${event.clientX - box.left}px`);
-                        card.style.setProperty("--my", `${event.clientY - box.top}px`);
-                      }}
-                    >
-                      {exampleCards.map((card, index) => (
-                        <button
-                          key={card.id}
-                          type="button"
-                          data-tone={card.tone}
-                          style={stagger(index)}
-                          onClick={() => {
-                            const example = FAILURE_EXAMPLES.find((item) => item.id === card.id);
-                            if (example) {
-                              setCategory(example.kind);
-                              fill(example.input);
-                            }
-                          }}
-                        >
-                          <span className="ls-example-icon">
-                            <Icon name={card.icon} />
-                          </span>
-                          <strong>{card.title}</strong>
-                          <span>{card.detail}</span>
-                          <i>
-                            <Icon name="arrowRight" size={16} />
-                          </i>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="ls-welcome-context">
-                      <Icon name="book" size={16} />
-                      <span>Have a runbook or relevant code?</span>
-                      <button type="button" onClick={() => setPanel("context")}>
-                        Give Lockstep some context <span>↗</span>
-                      </button>
-                    </div>
                   </div>
-                )}
-                {state.busy ? (
+                ) : null}
+                {live ? (
                   <div className="ls-conversation ls-live-turn">
                     <div className="ls-assistant-heading">
-                      <span className="ls-avatar ls-agent-avatar">
-                        <AgentMark size={30} motion="working" />
-                      </span>
-                      <strong>Lockstep</strong>
-                      <span className="ls-live-label">
-                        <span className="ls-spinner" />
-                        <span className="ls-live-text" key={state.activity.length}>
-                          {state.activity.at(-1)?.message ?? "Opening the investigation…"}
-                        </span>
+                      <AgentMark size={22} motion="working" />
+                      <span className="ls-live-text" key={state.activity.length}>
+                        {state.activity.at(-1)?.message ?? "Opening the investigation…"}
                       </span>
                     </div>
                     {state.streaming ? (
-                      <>
-                        <div className="ls-provisional-label">
-                          STREAMING DRAFT · NOT YET VALIDATED
-                        </div>
+                      <div className="ls-draft">
+                        <span className="ls-provisional-label">Draft · not yet validated</span>
                         <RichText source={state.streaming} />
-                      </>
+                      </div>
                     ) : null}
                     {state.activity.length > 0 ? (
                       <details className="ls-activity">
                         <summary>
-                          Investigation activity <span>{state.activity.length} stages</span>
-                          <Icon name="chevron" size={15} />
+                          Steps <span>{state.activity.length}</span>
+                          <Icon name="chevron" size={14} />
                         </summary>
                         <ol>
                           {state.activity.map((item, index) => (
@@ -692,7 +620,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
               <div className="ls-composer-area">
                 {state.error || localError ? (
                   <div className="ls-composer-error" role="alert">
-                    <Icon name="help" size={16} />
+                    <Icon name="alert" size={16} />
                     <span>{localError ?? state.error}</span>
                     {state.thread ? (
                       <button type="button" onClick={() => void state.recover()}>
@@ -712,7 +640,11 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                     </button>
                   </div>
                 ) : null}
-                <form className="ls-composer" onSubmit={(event) => void submit(event)}>
+                <form
+                  className="ls-composer"
+                  ref={formRef}
+                  onSubmit={(event) => void submit(event)}
+                >
                   <label className="ls-sr-only" htmlFor="sidekick-message">
                     Message Lockstep
                   </label>
@@ -727,7 +659,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                         ? "Add more evidence, or ask a follow-up…"
                         : "Paste an error, share the logs, or ask a question…"
                     }
-                    rows={2}
+                    rows={1}
                     spellCheck={false}
                     aria-describedby="composer-privacy"
                     aria-invalid={draft.length > SIDEKICK_LIMITS.message}
@@ -770,7 +702,6 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                         <Icon name="attach" />
                       </button>
                       <label className="ls-kind-select">
-                        <Icon name="code" size={14} />
                         <span className="ls-sr-only">Failure category</span>
                         <select
                           aria-label="Failure category"
@@ -787,6 +718,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                             </option>
                           ))}
                         </select>
+                        <Icon name="chevron" size={14} />
                       </label>
                       <button
                         type="button"
@@ -802,7 +734,7 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                           className="ls-context-chip"
                           onClick={() => setPanel("context")}
                         >
-                          <Icon name="book" size={12} />
+                          <Icon name="book" size={13} />
                           {state.selectedIds.length} sources
                         </button>
                       ) : null}
@@ -833,37 +765,40 @@ export function SidekickApp({ view = "agent", initialKind }: Props) {
                     )}
                   </div>
                 </form>
-                <div className="ls-composer-foot">
-                  <p id="composer-privacy">
-                    Remove secrets before sending. Verify suggestions before applying them.
-                  </p>
-                  <span>
-                    {draft.length > 1000
-                      ? `${draft.length.toLocaleString()} / 32,768`
-                      : "Enter to send · Shift + Enter for a new line"}
-                  </span>
-                </div>
+                {empty ? (
+                  <div className="ls-example-grid">
+                    {suggestions.map((card, index) => (
+                      <button
+                        key={card.id}
+                        type="button"
+                        style={stagger(index)}
+                        onClick={() => {
+                          const example = FAILURE_EXAMPLES.find((item) => item.id === card.id);
+                          if (example) {
+                            setCategory(example.kind);
+                            fill(example.input);
+                          }
+                        }}
+                      >
+                        <strong>{card.title}</strong>
+                        <span>{card.detail}</span>
+                        <Icon name="arrowRight" size={16} />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="ls-composer-foot">
+                <p id="composer-privacy">
+                  Remove secrets before sending. Verify suggestions before applying them.
+                </p>
+                {draft.length > 1000 ? (
+                  <span>{`${draft.length.toLocaleString()} / 32,768`}</span>
+                ) : null}
               </div>
             </>
           )}
         </main>
-        {state.thread && view === "agent" ? (
-          <button
-            className="ls-export-thread"
-            type="button"
-            onClick={() =>
-              downloadFile(
-                `lockstep-thread-${state.thread!.id}.json`,
-                JSON.stringify(state.thread, null, 2),
-                "application/json",
-              )
-            }
-            aria-label="Export conversation"
-            title="Export conversation"
-          >
-            <Icon name="download" size={14} />
-          </button>
-        ) : null}
       </div>
       {panel === "context" ? (
         <KnowledgePanel
@@ -898,38 +833,32 @@ function Message({
   if (message.role === "user")
     return (
       <article className="ls-message ls-user-turn">
-        <div className="ls-message-heading">
-          <span className="ls-avatar ls-user-avatar">Y</span>
-          <strong>You</strong>
-          <span>
-            {pending
-              ? "Submitting…"
-              : new Date(message.createdAt).toLocaleTimeString(undefined, {
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
-          </span>
-        </div>
         <div className="ls-user-content">
           <pre>{message.content}</pre>
+        </div>
+        <div className="ls-message-meta">
           {message.contextIds?.length ? (
             <span className="ls-user-context">
               <Icon name="book" size={12} />
               {message.contextIds.length} context sources attached
             </span>
           ) : null}
+          <time dateTime={message.createdAt} data-pending={pending || undefined}>
+            {pending
+              ? "Sending…"
+              : new Date(message.createdAt).toLocaleTimeString(undefined, {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+          </time>
         </div>
       </article>
     );
   return (
     <article className="ls-message ls-assistant-turn" data-status={message.status}>
       <div className="ls-message-heading">
-        <span className="ls-avatar ls-agent-avatar">
-          <AgentMark size={30} />
-        </span>
-        <strong>Lockstep</strong>
+        <AgentMark size={22} />
         <ResponseMode report={message.report} mode={message.mode} status={message.status} />
-        <CopyControl text={message.content} />
       </div>
       <div className="ls-answer-content">
         <RichText source={message.content} />
@@ -941,19 +870,21 @@ function Message({
           </div>
         ) : null}
         {message.status === "complete" ? <FallbackNotice report={message.report} /> : null}
-        {message.report ? (
-          <div className="ls-answer-tools">
-            <button type="button" onClick={() => onReport(message.report ?? null, "evidence")}>
-              <Icon name="evidence" size={14} />
-              Inspect {message.report.evidence.length} sources
-            </button>
-            <button type="button" onClick={() => onReport(message.report ?? null, "report")}>
-              <Icon name="code" size={14} />
-              Structured report
-            </button>
-            <span>References checked</span>
-          </div>
-        ) : null}
+        <div className="ls-answer-tools">
+          <CopyControl text={message.content} />
+          {message.report ? (
+            <>
+              <button type="button" onClick={() => onReport(message.report ?? null, "evidence")}>
+                <Icon name="evidence" size={15} />
+                Inspect {message.report.evidence.length} sources
+              </button>
+              <button type="button" onClick={() => onReport(message.report ?? null, "report")}>
+                <Icon name="code" size={15} />
+                Structured report
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
     </article>
   );

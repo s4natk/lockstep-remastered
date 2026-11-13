@@ -34,7 +34,7 @@ export function ReportPanel({
     </span>
   );
   return (
-    <SidePanel title="Investigation details" eyebrow="REASONING YOU CAN INSPECT" onClose={onClose}>
+    <SidePanel title="Investigation details" onClose={onClose}>
       <div className="ls-panel-tabs" role="tablist" aria-label="Investigation details">
         <button
           type="button"
@@ -55,7 +55,7 @@ export function ReportPanel({
       </div>
       {!report ? (
         <div className="ls-panel-empty">
-          <Icon name="evidence" size={32} />
+          <Icon name="evidence" size={22} />
           <h3>The evidence will appear here.</h3>
           <p>
             Submit a failure to extract observations and trace the final response to its sources.
@@ -94,7 +94,7 @@ export function ReportPanel({
                             <code>
                               {frame.file}
                               {frame.line ? `:${frame.line}` : ""}
-                              {frame.function ? ` ? ${frame.function}` : ""}
+                              {frame.function ? ` in ${frame.function}` : ""}
                             </code>
                           </li>
                         ))}
@@ -121,12 +121,12 @@ export function ReportPanel({
                 </span>
                 <span className="ls-source-type">
                   {item.kind === "context"
-                    ? "YOUR CONTEXT"
+                    ? "Your context"
                     : item.kind === "runbook"
-                      ? "RUNBOOK"
+                      ? "Runbook"
                       : item.kind === "sql_parser"
-                        ? "PARSER"
-                        : "INPUT"}
+                        ? "Parser"
+                        : "Input"}
                 </span>
               </button>
             ))}
@@ -134,7 +134,7 @@ export function ReportPanel({
           {source ? (
             <section className="ls-source-detail" aria-label="Selected evidence">
               <div>
-                <span className="ls-overline">{source.id}</span>
+                <span className="ls-source-id">{source.id}</span>
                 {source.provenance.lineStart ? (
                   <span>
                     Line {source.provenance.lineStart}
