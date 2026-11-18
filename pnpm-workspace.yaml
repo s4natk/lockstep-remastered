@@ -14,3 +14,9 @@ overrides:
   sharp: "^0.35.5"
   undici: "^7.30.1"
   minimatch: "^11.0.1"
+
+# No published picomatch release fixes this. It is only pulled in by eslint and
+# secretlint, and those tools do not match attacker-controlled extglobs.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf
